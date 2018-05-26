@@ -1,9 +1,8 @@
-# add ConvolutionDepthwise  ShuffleChannel
+# Caffe
+
+#add ConvolutionDepthwise  ShuffleChannel
 #add some annotation for code of Chinese language
 
-
-
-# Caffe
 
 [![Build Status](https://travis-ci.org/BVLC/caffe.svg?branch=master)](https://travis-ci.org/BVLC/caffe)
 [![License](https://img.shields.io/badge/license-BSD-blue.svg)](LICENSE)
