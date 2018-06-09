@@ -312,6 +312,11 @@ class Net {
   /// The parameters in the network.
   vector<shared_ptr<Blob<Dtype> > > params_;
   vector<Blob<Dtype>*> learnable_params_;
+  //上述两个数据成员存放的是指向网络参数的指针，注意，直接拥有参数的是layer，params_保存的只是网络中各个layer的参数的指针；而learnable_params_也如其名字所指，保存的是各个layer中可以被学习的参数。
+
+
+
+
   /**
    * The mapping from params_ -> learnable_params_: we have
    * learnable_param_ids_.size() == params_.size(),

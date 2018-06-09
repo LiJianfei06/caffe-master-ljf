@@ -37,19 +37,20 @@ class Layer {
    * to SetUp(), where the dimensions of the bottom blobs are provided to the
    * layer.
    */
-  explicit Layer(const LayerParameter& param)
+  explicit Layer(const LayerParameter& param)// 显式构造函数，从LayerParameter中加载配置
     : layer_param_(param) {
       // Set phase and copy blobs (if there are any).
-      phase_ = param.phase();
+      phase_ = param.phase();   // 设置当前阶段 TRAIN or TEST
       if (layer_param_.blobs_size() > 0) {
-        blobs_.resize(layer_param_.blobs_size());
-        for (int i = 0; i < layer_param_.blobs_size(); ++i) {
+        blobs_.resize(layer_param_.blobs_size()); // 设置blobs数量(不一定是1哦)
+        for (int i = 0; i < layer_param_.blobs_size(); ++i) 
+        {//按照layer_param_设置本身Blob对象个数，并依次把每个Blob对象尺寸调整为与layer_param_中Blob尺寸一致
           blobs_[i].reset(new Blob<Dtype>());
-          blobs_[i]->FromProto(layer_param_.blobs(i));
+          blobs_[i]->FromProto(layer_param_.blobs(i)); // 从protobuf序列化文件读取blob对象
         }
       }
     }
-  virtual ~Layer() {}
+  virtual ~Layer() {}   // 虚析构函数
 
   /**
    * @brief Implements common layer setup functionality.
@@ -66,10 +67,10 @@ class Layer {
    */
   void SetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
-    CheckBlobCounts(bottom, top);
-    LayerSetUp(bottom, top);
-    Reshape(bottom, top);
-    SetLossWeights(top);
+    CheckBlobCounts(bottom, top);   //检查blob
+    LayerSetUp(bottom, top);        //与层类型相关的配置过程
+    Reshape(bottom, top);           //对Top Blob进行变形
+    SetLossWeights(top);            //设置损失权重因子Blob
   }
 
   /**
@@ -89,7 +90,8 @@ class Layer {
    * adjust the top blob sizes.
    */
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
-      const vector<Blob<Dtype>*>& top) {}
+      const vector<Blob<Dtype>*>& top) {}//层配置虚函数，做特定类型层相关配置，由该类型层自己实现
+
 
   /**
    * @brief Adjust the shapes of top blobs and internal buffers to accommodate
@@ -409,17 +411,21 @@ class Layer {
 // Forward and backward wrappers. You should implement the cpu and
 // gpu specific implementations instead, and should not change these
 // functions.
+// 前向传播函数
+// 给定Bottom Blob，计算Top Blob和loss，返回值为当前层的loss
+// 该函数会调用相应设备包装函数，如Forward_cpu or Forward_gpu来实现真正计算过程
+// 如果该层有非零loss权重参数，包装函数会计算并返回loss
 template <typename Dtype>
 inline Dtype Layer<Dtype>::Forward(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
   Dtype loss = 0;
-  Reshape(bottom, top);
+  Reshape(bottom, top);     // 这个函数要派生类中实现了(基类中是纯虚函数)
   switch (Caffe::mode()) {
   case Caffe::CPU:
-    Forward_cpu(bottom, top);
+    Forward_cpu(bottom, top);   // 这个函数要派生类中实现了(基类中是纯虚函数)
     for (int top_id = 0; top_id < top.size(); ++top_id) {
-      if (!this->loss(top_id)) { continue; }
-      const int count = top[top_id]->count();
+      if (!this->loss(top_id)) { continue; }    //如果需要计算loss还需要进一步操作,否则continue
+      const int count = top[top_id]->count();   // 获得由多少个数据(N*C*H*W) //lookhere
       const Dtype* data = top[top_id]->cpu_data();
       const Dtype* loss_weights = top[top_id]->cpu_diff();
       loss += caffe_cpu_dot(count, data, loss_weights);
@@ -445,6 +451,10 @@ inline Dtype Layer<Dtype>::Forward(const vector<Blob<Dtype>*>& bottom,
   return loss;
 }
 
+//反向传播函数
+//给定输出的Top Blob误差梯度，计算输入的Bottom Blob的误差梯度
+//propagate_down为多路开关，与Bottom Blob矢量维度相同，每个值表示是否将误差梯度传递到对应的Bottom Blob
+//该函数会调用相应设备包装函数，如Backward_cpu and (可选) Backward_gpu实现计算过程，由派生类负责实现
 template <typename Dtype>
 inline void Layer<Dtype>::Backward(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down,

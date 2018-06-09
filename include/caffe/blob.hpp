@@ -23,6 +23,8 @@ namespace caffe {
 template <typename Dtype>
 class Blob {
  public:
+     
+  //构造函数   
   Blob()
        : data_(), diff_(), count_(0), capacity_(0) {}
 
@@ -267,12 +269,12 @@ class Blob {
   bool ShapeEquals(const BlobProto& other);
 
  protected:
-  shared_ptr<SyncedMemory> data_;
-  shared_ptr<SyncedMemory> diff_;
-  shared_ptr<SyncedMemory> shape_data_;
-  vector<int> shape_;
-  int count_;
-  int capacity_;
+  shared_ptr<SyncedMemory> data_;		// 前向传播的数据
+  shared_ptr<SyncedMemory> diff_;		// diff是反向传播的数据  
+  shared_ptr<SyncedMemory> shape_data_;	// 旧的形状数据  
+  vector<int> shape_;					// NCHW 主要变量 新的形状数据 
+  int count_;							// 数据的个数
+  int capacity_;						// 容量  
 
   DISABLE_COPY_AND_ASSIGN(Blob);
 };  // class Blob

@@ -19,6 +19,7 @@ namespace caffe {
   * execution with a SIGINT (Ctrl-C).
   */
   namespace SolverAction {
+  /*这个枚举类型定义获得外界信号的几种定义*/
     enum Enum {
       NONE = 0,  // Take no special action.
       STOP = 1,  // Stop training. snapshot_after_train controls whether a
@@ -41,44 +42,53 @@ typedef boost::function<SolverAction::Enum()> ActionCallback;
 template <typename Dtype>
 class Solver {
  public:
+  /*---构造函数----*/
   explicit Solver(const SolverParameter& param);
   explicit Solver(const string& param_file);
+
+  /*---初始化函数----*/
   void Init(const SolverParameter& param);
+
+  /*---初始化训练网络和测试网络 的函数----*/
   void InitTrainNet();
   void InitTestNets();
 
   // Client of the Solver optionally may call this in order to set the function
   // that the solver uses to see what action it should take (e.g. snapshot or
   // exit training early).
-  void SetActionFunction(ActionCallback func);
-  SolverAction::Enum GetRequestedAction();
+  void SetActionFunction(ActionCallback func);/*传入信号传递函数指针*/
+  SolverAction::Enum GetRequestedAction();/*返回传入的消息*/
+
   // The main entry of the solver function. In default, iter will be zero. Pass
   // in a non-zero iter number to resume training for a pre-trained net.
+  /*训练的主函数*/
   virtual void Solve(const char* resume_file = NULL);
   inline void Solve(const string resume_file) { Solve(resume_file.c_str()); }
-  void Step(int iters);
+  void Step(int iters);/*上面Solve调用的主函数，通过多次迭代实现训练*/
   // The Restore method simply dispatches to one of the
   // RestoreSolverStateFrom___ protected methods. You should implement these
   // methods to restore the state from the appropriate snapshot type.
-  void Restore(const char* resume_file);
+  void Restore(const char* resume_file);// 恢复模型
   // The Solver::Snapshot function implements the basic snapshotting utility
   // that stores the learned net. You should implement the SnapshotSolverState()
   // function that produces a SolverState protocol buffer that needs to be
   // written to disk together with the learned net.
-  void Snapshot();
-  virtual ~Solver() {}
-  inline const SolverParameter& param() const { return param_; }
-  inline shared_ptr<Net<Dtype> > net() { return net_; }
-  inline const vector<shared_ptr<Net<Dtype> > >& test_nets() {
-    return test_nets_;
+  void Snapshot();// 主要是基本的快照功能，存储学习的网络 
+  virtual ~Solver() {} // 析构函数
+
+  inline const SolverParameter& param() const { return param_; }/*返回配置参数变量*/
+  inline shared_ptr<Net<Dtype> > net() { return net_; }/*返回net*/
+  inline const vector<shared_ptr<Net<Dtype> > >& test_nets() /*返回指向测试的网络的指针容器test_nets_*/
+  {
+      return test_nets_;
   }
-  int iter() const { return iter_; }
+  int iter() const { return iter_; /*返回迭代次数*/}
 
   // Invoked at specific points during an iteration
   class Callback {
    protected:
     virtual void on_start() = 0;
-    virtual void on_gradients_ready() = 0;
+    virtual void on_gradients_ready() = 0;  // 子类中会实现
 
     template <typename T>
     friend class Solver;
@@ -112,9 +122,9 @@ class Solver {
   SolverParameter param_;
   int iter_;
   int current_step_;
-  shared_ptr<Net<Dtype> > net_;
-  vector<shared_ptr<Net<Dtype> > > test_nets_;
-  vector<Callback*> callbacks_;
+  shared_ptr<Net<Dtype> > net_; // Net是一个类，在./include/caffe/net.hpp中
+  vector<shared_ptr<Net<Dtype> > > test_nets_;//test net可以有多个
+  vector<Callback*> callbacks_; //嵌套类，暂时还不知道它的作用
   vector<Dtype> losses_;
   Dtype smoothed_loss_;
 
