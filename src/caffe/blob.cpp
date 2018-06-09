@@ -8,6 +8,18 @@
 
 namespace caffe {
 
+
+
+/*****************************************************************
+*Function:      Reshape(N,C,H,W)
+*Description:   NCHW 这里重载函数仅为设置形状,并调用函数
+*Calls:			Reshape(vector<>shape)
+*Called By:      
+*Input:         NCHW 
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void Blob<Dtype>::Reshape(const int num, const int channels, const int height,
     const int width) {
@@ -19,11 +31,22 @@ void Blob<Dtype>::Reshape(const int num, const int channels, const int height,
   Reshape(shape);
 }
 
+/*****************************************************************
+*Function:      Reshape(vector<>shape)
+*Description:   根据一个形状容器参数改变一个blob
+*Calls:			Reshape(vector<shape>)
+*Called By:      
+*Input:         vector<>shape 
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void Blob<Dtype>::Reshape(const vector<int>& shape) {
-  CHECK_LE(shape.size(), kMaxBlobAxes);
+  CHECK_LE(shape.size(), kMaxBlobAxes); //Google glog 是否小于规定的最大BLOB的维度(32维 const 写死了)
+
   count_ = 1;
-  shape_.resize(shape.size());
+  shape_.resize(shape.size());		// vector 的resize  就是4
   if (!shape_data_ || shape_data_->size() < shape.size() * sizeof(int)) {
     shape_data_.reset(new SyncedMemory(shape.size() * sizeof(int)));
   }
@@ -33,23 +56,33 @@ void Blob<Dtype>::Reshape(const vector<int>& shape) {
     if (count_ != 0) {
       CHECK_LE(shape[i], INT_MAX / count_) << "blob size exceeds INT_MAX";
     }
-    count_ *= shape[i];
-    shape_[i] = shape[i];
-    shape_data[i] = shape[i];
+    count_ *= shape[i];				// 循环后就是N*C*H*W
+    shape_[i] = shape[i];			// 新的形状数据赋值
+    shape_data[i] = shape[i];		// 旧的形状数据赋值
   }
-  if (count_ > capacity_) {
+  if (count_ > capacity_) {			// 检查容量
     capacity_ = count_;
     data_.reset(new SyncedMemory(capacity_ * sizeof(Dtype)));
     diff_.reset(new SyncedMemory(capacity_ * sizeof(Dtype)));
   }
 }
 
+/*****************************************************************
+*Function:      Reshape(const BlobShape& shape)
+*Description:   根据一个BlobShape参数改变一个blob
+*Calls:			Reshape(vector<shape>)
+*Called By:      
+*Input:         vector<>shape 
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void Blob<Dtype>::Reshape(const BlobShape& shape) {
-  CHECK_LE(shape.dim_size(), kMaxBlobAxes);
+  CHECK_LE(shape.dim_size(), kMaxBlobAxes); //是否小于规定的最大BLOB的维度(32维
   vector<int> shape_vec(shape.dim_size());
   for (int i = 0; i < shape.dim_size(); ++i) {
-    shape_vec[i] = shape.dim(i);
+    shape_vec[i] = shape.dim(i);  			// 复制形状数据
   }
   Reshape(shape_vec);
 }
@@ -59,14 +92,35 @@ void Blob<Dtype>::ReshapeLike(const Blob<Dtype>& other) {
   Reshape(other.shape());
 }
 
+/*****************************************************************
+*Function:      Blob(N,C,H,W)
+*Description:   设置blob
+*Calls:			Reshape(N,C,H,W)
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 Blob<Dtype>::Blob(const int num, const int channels, const int height,
     const int width)
   // capacity_ must be initialized before calling Reshape
+	// 技巧，先初始化容量为0，然后用reshape来分配内存了
   : capacity_(0) {
   Reshape(num, channels, height, width);
 }
 
+/*****************************************************************
+*Function:      Blob(const vector<int>& shape)
+*Description:   设置blob
+*Calls:			Reshape(shape)
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 Blob<Dtype>::Blob(const vector<int>& shape)
   // capacity_ must be initialized before calling Reshape
@@ -152,17 +206,38 @@ Dtype* Blob<Dtype>::mutable_gpu_diff() {
   return static_cast<Dtype*>(diff_->mutable_gpu_data());
 }
 
+/*****************************************************************
+*Function:      ShareData(const Blob& other)
+*Description:   将其他blob的data复制到当前的blob中去
+*Calls:			other.data() 成员函数
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void Blob<Dtype>::ShareData(const Blob& other) {
   CHECK_EQ(count_, other.count());
   data_ = other.data();
 }
 
+/*****************************************************************
+*Function:      ShareData(const Blob& other)
+*Description:   将其他blob的diff数据复制到当前的blob中去
+*Calls:			other.diff() 成员函数
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void Blob<Dtype>::ShareDiff(const Blob& other) {
   CHECK_EQ(count_, other.count());
   diff_ = other.diff();
 }
+
 
 // The "update" method is used for parameter blobs in a Net, which are stored
 // as Blob<float> or Blob<double> -- hence we do not define it for
@@ -170,12 +245,28 @@ void Blob<Dtype>::ShareDiff(const Blob& other) {
 template <> void Blob<unsigned int>::Update() { NOT_IMPLEMENTED; }
 template <> void Blob<int>::Update() { NOT_IMPLEMENTED; }
 
+
+
+
+/*****************************************************************
+*Function:      Update()
+*Description:   Update是计算data=-1 * diff + data  
+*Calls:			
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void Blob<Dtype>::Update() {
   // We will perform update based on where the data is located.
   switch (data_->head()) {
   case SyncedMemory::HEAD_AT_CPU:
     // perform computation on CPU
+	  // template <> void caffe_axpy<float>(const int N, const float alpha, const float* X, float* Y) { cblas_saxpy(N, alpha, X, 1, Y, 1); } 
+	  // caffe_axpy计算的是Y=alpha * X + Y ，其中alpha=-1了这里
+	  // 存储的时候用到了mutable_cpu_data，防止其他线程访问
     caffe_axpy<Dtype>(count_, Dtype(-1),
         static_cast<const Dtype*>(diff_->cpu_data()),
         static_cast<Dtype*>(data_->mutable_cpu_data()));
@@ -206,6 +297,16 @@ template <> int Blob<int>::asum_data() const {
   return 0;
 }
 
+/*****************************************************************
+*Function:      asum_data()
+*Description:   计算data的L1范数  
+*Calls:			
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 Dtype Blob<Dtype>::asum_data() const {
   if (!data_) { return 0; }
@@ -241,6 +342,16 @@ template <> int Blob<int>::asum_diff() const {
   return 0;
 }
 
+/*****************************************************************
+*Function:      asum_diff()
+*Description:   计算diff的L1范数  
+*Calls:			
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 Dtype Blob<Dtype>::asum_diff() const {
   if (!diff_) { return 0; }
@@ -276,6 +387,18 @@ template <> int Blob<int>::sumsq_data() const {
   return 0;
 }
 
+
+// 计算sum of square of data(L2范数)
+/*****************************************************************
+*Function:      sumsq_data()
+*Description:   计算data的L2范数  
+*Calls:			
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 Dtype Blob<Dtype>::sumsq_data() const {
   Dtype sumsq;
@@ -313,6 +436,17 @@ template <> int Blob<int>::sumsq_diff() const {
   return 0;
 }
 
+
+/*****************************************************************
+*Function:      sumsq_diff()
+*Description:   计算diff的L2范数  
+*Calls:			
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 Dtype Blob<Dtype>::sumsq_diff() const {
   Dtype sumsq;
@@ -348,6 +482,17 @@ template <> void Blob<int>::scale_data(int scale_factor) {
   NOT_IMPLEMENTED;
 }
 
+
+/*****************************************************************
+*Function:      scale_data()
+*Description:   将data部分乘以一个因子scale_factor 
+*Calls:			
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void Blob<Dtype>::scale_data(Dtype scale_factor) {
   Dtype* data;
@@ -381,6 +526,16 @@ template <> void Blob<int>::scale_diff(int scale_factor) {
   NOT_IMPLEMENTED;
 }
 
+/*****************************************************************
+*Function:      scale_diff()
+*Description:   将diff部分乘以一个因子scale_factor 
+*Calls:			
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void Blob<Dtype>::scale_diff(Dtype scale_factor) {
   Dtype* diff;
@@ -406,8 +561,19 @@ void Blob<Dtype>::scale_diff(Dtype scale_factor) {
   }
 }
 
+/*****************************************************************
+*Function:      ShapeEquals()
+*Description:   判断两个blob是否shape一样 
+*Calls:			
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 bool Blob<Dtype>::ShapeEquals(const BlobProto& other) {
+	// 判断是否是旧的blob
   if (other.has_num() || other.has_channels() ||
       other.has_height() || other.has_width()) {
     // Using deprecated 4D Blob dimensions --
@@ -422,6 +588,7 @@ bool Blob<Dtype>::ShapeEquals(const BlobProto& other) {
            LegacyShape(-2) == other.height() &&
            LegacyShape(-1) == other.width();
   }
+  // 如果不是旧的blob则直接判断
   vector<int> other_shape(other.shape().dim_size());
   for (int i = 0; i < other.shape().dim_size(); ++i) {
     other_shape[i] = other.shape().dim(i);
@@ -429,6 +596,17 @@ bool Blob<Dtype>::ShapeEquals(const BlobProto& other) {
   return shape_ == other_shape;
 }
 
+
+/*****************************************************************
+*Function:      CopyFrom()
+*Description:   从别的blob进行复制 
+*Calls:			
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void Blob<Dtype>::CopyFrom(const Blob& source, bool copy_diff, bool reshape) {
   if (source.count() != count_ || source.shape() != shape_) {
@@ -441,6 +619,9 @@ void Blob<Dtype>::CopyFrom(const Blob& source, bool copy_diff, bool reshape) {
   switch (Caffe::mode()) {
   case Caffe::GPU:
     if (copy_diff) {
+		// GPU复制diff
+		// 这都用 template <> void caffe_copy<float>(const int N, const float* X, float* Y) { cblas_scopy(N, X, 1, Y, 1); }  
+		// 干嘛要用BLAS里面的运算来复制，真是多余...
       caffe_copy(count_, source.gpu_diff(),
           static_cast<Dtype*>(diff_->mutable_gpu_data()));
     } else {
@@ -449,6 +630,7 @@ void Blob<Dtype>::CopyFrom(const Blob& source, bool copy_diff, bool reshape) {
     }
     break;
   case Caffe::CPU:
+	// CPU复制diff
     if (copy_diff) {
       caffe_copy(count_, source.cpu_diff(),
           static_cast<Dtype*>(diff_->mutable_cpu_data()));
@@ -462,10 +644,22 @@ void Blob<Dtype>::CopyFrom(const Blob& source, bool copy_diff, bool reshape) {
   }
 }
 
+
+/*****************************************************************
+*Function:      FromProto()
+*Description:   blob进行复制 
+*Calls:			
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void Blob<Dtype>::FromProto(const BlobProto& proto, bool reshape) {
   if (reshape) {
     vector<int> shape;
+	// 如果是旧的blob直接转换为新的blob中的shape数据 
     if (proto.has_num() || proto.has_channels() ||
         proto.has_height() || proto.has_width()) {
       // Using deprecated 4D Blob dimensions --
@@ -481,12 +675,12 @@ void Blob<Dtype>::FromProto(const BlobProto& proto, bool reshape) {
         shape[i] = proto.shape().dim(i);
       }
     }
-    Reshape(shape);
+    Reshape(shape);		// 复制shape数据到当前blob  
   } else {
     CHECK(ShapeEquals(proto)) << "shape mismatch (reshape not set)";
   }
   // copy data
-  Dtype* data_vec = mutable_cpu_data();
+  Dtype* data_vec = mutable_cpu_data();	// 获取当前的blob在内存上的数据指针，该指针是互斥的
   if (proto.double_data_size() > 0) {
     CHECK_EQ(count_, proto.double_data_size());
     for (int i = 0; i < count_; ++i) {
@@ -499,7 +693,7 @@ void Blob<Dtype>::FromProto(const BlobProto& proto, bool reshape) {
     }
   }
   if (proto.double_diff_size() > 0) {
-    CHECK_EQ(count_, proto.double_diff_size());
+    CHECK_EQ(count_, proto.double_diff_size());	// 获取当前的diff在内存上的数据指针，该指针是互斥的
     Dtype* diff_vec = mutable_cpu_diff();
     for (int i = 0; i < count_; ++i) {
       diff_vec[i] = proto.double_diff(i);
@@ -513,6 +707,20 @@ void Blob<Dtype>::FromProto(const BlobProto& proto, bool reshape) {
   }
 }
 
+// BlobProto和BlobShape是protobuf定义的，其中一些函数是自动生成的  
+// mutable_shape、add_dim、clear_double_data、clear_double_diff、add_double_data  
+// add_double_diff等  
+// 见src/caffe/proto/caffe.proto  
+/*****************************************************************
+*Function:      ToProto()
+*Description:   将对象序列化为protobuf文件  
+*Calls:			
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <>
 void Blob<double>::ToProto(BlobProto* proto, bool write_diff) const {
   proto->clear_shape();
@@ -533,6 +741,16 @@ void Blob<double>::ToProto(BlobProto* proto, bool write_diff) const {
   }
 }
 
+/*****************************************************************
+*Function:      ToProto()
+*Description:   将对象序列化为protobuf文件  
+*Calls:			
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <>
 void Blob<float>::ToProto(BlobProto* proto, bool write_diff) const {
   proto->clear_shape();
