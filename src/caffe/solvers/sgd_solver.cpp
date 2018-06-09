@@ -24,7 +24,8 @@ namespace caffe {
 // where base_lr, max_iter, gamma, step, stepvalue and power are defined
 // in the solver parameter protocol buffer, and iter is the current iteration.
 template <typename Dtype>
-Dtype SGDSolver<Dtype>::GetLearningRate() {
+Dtype SGDSolver<Dtype>::GetLearningRate() //获取学习率(根据不同策略计算) 
+{
   Dtype rate;
   const string& lr_policy = this->param_.lr_policy();
   if (lr_policy == "fixed") {
@@ -69,6 +70,17 @@ Dtype SGDSolver<Dtype>::GetLearningRate() {
   return rate;
 }
 
+//好像history维护旧的动量数据。update维护更新的相关数据，而且在snapshots中是不需要的。temp维护其他信息，这些信息可能是在计算梯度或者更新时需要的，而且在snapshots中是不需要的。前面的这几个参数输入到vector，用于后面的blob输出吧  
+/*****************************************************************
+*Function:      PreSolve()
+*Description:   获得可学习参数的空间，压入与网络的每一层blob相同大小的空间 
+*Calls:
+*Called By:     构造函数 SGDSolver() 
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void SGDSolver<Dtype>::PreSolve() {
   // Initialize the history
@@ -84,9 +96,24 @@ void SGDSolver<Dtype>::PreSolve() {
   }
 }
 
+/*****************************************************************
+*Function:      ClipGradients()
+*Description:   获修正梯度,防止梯度爆炸
+*Calls:
+*Called By:     ApplyUpdate() 
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void SGDSolver<Dtype>::ClipGradients() {
+  //LOG(INFO) <<"function ClipGradients() "<<" lijianfei debug!!!!!!!!!!";
+
+  //clip_gradient 的引入是为了处理gradient explosion的问题。直观作用就是让权重的更新限制在一个合适的范围,默认-1。
   const Dtype clip_gradients = this->param_.clip_gradients();
+  //LOG(INFO) <<"clip_gradients:"<<clip_gradients<< "  lijianfei debug!!!!!!!!!!";
+
   if (clip_gradients < 0) { return; }
   const vector<Blob<Dtype>*>& net_params = this->net_->learnable_params();
   Dtype sumsq_diff = 0;
@@ -105,16 +132,32 @@ void SGDSolver<Dtype>::ClipGradients() {
   }
 }
 
+/*****************************************************************
+*Function:      ApplyUpdate()
+*Description:   执行梯度的更新
+*Calls:
+*Called By:     Step() 
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void SGDSolver<Dtype>::ApplyUpdate() {
-  Dtype rate = GetLearningRate();
+  //LOG(INFO) <<"function void SGDSolver<Dtype>::ApplyUpdate() "<<" "<< "lijianfei debug!!!!!!!!!!";
+  
+  Dtype rate = GetLearningRate();       // 获取学习率  
   if (this->param_.display() && this->iter_ % this->param_.display() == 0) {
+  // 需要显示就显示一下
     LOG_IF(INFO, Caffe::root_solver()) << "Iteration " << this->iter_
         << ", lr = " << rate;
   }
-  ClipGradients();
+  ClipGradients();  // 修正梯度，防止梯度爆炸，默认-1是直接返回的
+
+  //更新各个层可被学习的参数
   for (int param_id = 0; param_id < this->net_->learnable_params().size();
        ++param_id) {
+    //LOG(INFO)<<"param_id:"<<param_id;
     Normalize(param_id);
     Regularize(param_id);
     ComputeUpdateValue(param_id, rate);
@@ -122,6 +165,16 @@ void SGDSolver<Dtype>::ApplyUpdate() {
   this->net_->Update();
 }
 
+/*****************************************************************
+*Function:      Normalize()
+*Description:   归一化  iter_size=1就直接return
+*Calls:
+*Called By:     ApplyUpdate() 
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void SGDSolver<Dtype>::Normalize(int param_id) {
   if (this->param_.iter_size() == 1) { return; }
@@ -130,6 +183,7 @@ void SGDSolver<Dtype>::Normalize(int param_id) {
   const Dtype accum_normalization = Dtype(1.) / this->param_.iter_size();
   switch (Caffe::mode()) {
   case Caffe::CPU: {
+    //LOG(INFO)<<"net_params[param_id]->count():"<<net_params[param_id]->count();
     caffe_scal(net_params[param_id]->count(), accum_normalization,
         net_params[param_id]->mutable_cpu_diff());
     break;
@@ -148,19 +202,32 @@ void SGDSolver<Dtype>::Normalize(int param_id) {
   }
 }
 
+/*****************************************************************
+*Function:      Regularize()
+*Description:   正则化
+*Calls:
+*Called By:     ApplyUpdate() 
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void SGDSolver<Dtype>::Regularize(int param_id) {
   const vector<Blob<Dtype>*>& net_params = this->net_->learnable_params();
   const vector<float>& net_params_weight_decay =
       this->net_->params_weight_decay();
-  Dtype weight_decay = this->param_.weight_decay();
-  string regularization_type = this->param_.regularization_type();
-  Dtype local_decay = weight_decay * net_params_weight_decay[param_id];
+  Dtype weight_decay = this->param_.weight_decay(); // 获取衰减系数
+  string regularization_type = this->param_.regularization_type();  // 获取正则化类型
+  Dtype local_decay = weight_decay * net_params_weight_decay[param_id];// 该衰减的权重
+  //LOG(INFO)<<"local_decay:"<<local_decay<<" lijianfei debug!!!!!!!!!!";
+
   switch (Caffe::mode()) {
   case Caffe::CPU: {
     if (local_decay) {
       if (regularization_type == "L2") {
         // add weight decay
+        // Y=alpha * X + Y 
         caffe_axpy(net_params[param_id]->count(),
             local_decay,
             net_params[param_id]->cpu_data(),
@@ -169,6 +236,7 @@ void SGDSolver<Dtype>::Regularize(int param_id) {
         caffe_cpu_sign(net_params[param_id]->count(),
             net_params[param_id]->cpu_data(),
             temp_[param_id]->mutable_cpu_data());
+        // Y=alpha * X + Y 
         caffe_axpy(net_params[param_id]->count(),
             local_decay,
             temp_[param_id]->cpu_data(),
@@ -216,6 +284,16 @@ void sgd_update_gpu(int N, Dtype* g, Dtype* h, Dtype momentum,
     Dtype local_rate);
 #endif
 
+/*****************************************************************
+*Function:      ComputeUpdateValue()
+*Description:   计算更新值
+*Calls:
+*Called By:     ApplyUpdate() 
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void SGDSolver<Dtype>::ComputeUpdateValue(int param_id, Dtype rate) {
   const vector<Blob<Dtype>*>& net_params = this->net_->learnable_params();
