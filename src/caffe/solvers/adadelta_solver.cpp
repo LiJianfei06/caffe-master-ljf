@@ -4,6 +4,17 @@
 
 namespace caffe {
 
+
+/*****************************************************************
+*Function:      AdaDeltaPreSolve()
+*Description:   
+*Calls:         
+*Called By:      daDeltaSolver() 构造函数
+*Input:         
+*Output:
+*Return:
+*Others:        和PreSolve() 功能相同
+*****************************************************************/
 template <typename Dtype>
 void AdaDeltaSolver<Dtype>::AdaDeltaPreSolve() {
   // Add the extra history entries for AdaDelta after those from
@@ -22,6 +33,17 @@ void adadelta_update_gpu(int N, Dtype* g, Dtype* h, Dtype* h2, Dtype momentum,
     Dtype delta, Dtype local_rate);
 #endif
 
+
+/*****************************************************************
+*Function:      ComputeUpdateValue()
+*Description:   
+*Calls:         
+*Called By:     ApplyUpdate()
+*Input:         
+*Output:
+*Return:
+*Others:       计算更新值  
+*****************************************************************/
 template <typename Dtype>
 void AdaDeltaSolver<Dtype>::ComputeUpdateValue(int param_id, Dtype rate) {
   const vector<Blob<Dtype>*>& net_params = this->net_->learnable_params();

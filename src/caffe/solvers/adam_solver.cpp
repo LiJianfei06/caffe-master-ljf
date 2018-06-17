@@ -4,6 +4,16 @@
 
 namespace caffe {
 
+/*****************************************************************
+*Function:      AdamPreSolve()
+*Description:   计算更新值
+*Calls:
+*Called By:     ApplyUpdate() 
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 template <typename Dtype>
 void AdamSolver<Dtype>::AdamPreSolve() {
   // Add the extra history entries for Adam after those from

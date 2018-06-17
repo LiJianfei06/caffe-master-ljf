@@ -3,6 +3,16 @@
 
 namespace caffe {
 
+/*****************************************************************
+*Function:      AdaDeltaUpdate()
+*Description:   梯度更新
+*Calls:         
+*Called By:     adadelta_update_gpu() 
+*Input:         
+*Output:
+*Return:
+*Others:        参考文献：ADADELTA: AN ADAPTIVE LEARNING RATE METHOD
+*****************************************************************/
 template <typename Dtype>
 __global__ void AdaDeltaUpdate(int N, Dtype* g, Dtype* h, Dtype* h2,
     Dtype momentum, Dtype delta, Dtype local_rate) {
@@ -14,6 +24,17 @@ __global__ void AdaDeltaUpdate(int N, Dtype* g, Dtype* h, Dtype* h2,
     g[i] = local_rate * gi;
   }
 }
+
+/*****************************************************************
+*Function:      adadelta_update_gpu()
+*Description:   梯度更新
+*Calls:         AdaDeltaUpdate()
+*Called By:     ComputeUpdateValue() 
+*Input:         
+*Output:
+*Return:
+*Others:        GPU版本
+*****************************************************************/
 template <typename Dtype>
 void adadelta_update_gpu(int N, Dtype* g, Dtype* h, Dtype* h2, Dtype momentum,
     Dtype delta, Dtype local_rate) {

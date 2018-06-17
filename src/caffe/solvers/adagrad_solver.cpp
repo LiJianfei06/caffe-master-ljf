@@ -10,6 +10,16 @@ void adagrad_update_gpu(int N, Dtype* g, Dtype* h, Dtype delta,
     Dtype local_rate);
 #endif
 
+/*****************************************************************
+*Function:      ComputeUpdateValue()
+*Description:   计算更新值
+*Calls:         adagrad_update_gpu() 等 
+*Called By:      
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 void AdaGradSolver<Dtype>::ComputeUpdateValue(int param_id, Dtype rate) {
   const vector<Blob<Dtype>*>& net_params = this->net_->learnable_params();

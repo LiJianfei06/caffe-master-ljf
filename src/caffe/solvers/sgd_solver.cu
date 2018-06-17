@@ -7,9 +7,22 @@ template <typename Dtype>
 __global__ void SGDUpdate(int N, Dtype* g, Dtype* h,
     Dtype momentum, Dtype local_rate) {
   CUDA_KERNEL_LOOP(i, N) {
-    g[i] = h[i] = momentum*h[i] + local_rate*g[i];
+    g[i] = h[i] = momentum*h[i] + local_rate*g[i]; // 更新公式 损失由loss层计算得到
   }
 }
+
+
+
+/*****************************************************************
+*Function:      sgd_update_gpu()
+*Description:   梯度更新
+*Calls:         SGDUpdate()
+*Called By:     ComputeUpdateValue() 
+*Input:         
+*Output:
+*Return:
+*Others:        GPU版本
+*****************************************************************/
 template <typename Dtype>
 void sgd_update_gpu(int N, Dtype* g, Dtype* h, Dtype momentum,
     Dtype local_rate) {

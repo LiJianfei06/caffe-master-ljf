@@ -3,6 +3,16 @@
 
 namespace caffe {
 
+/*****************************************************************
+*Function:      NesterovUpdate()
+*Description:   计算更新值
+*Calls:         
+*Called By:     nesterov_update_gpu()
+*Input:         
+*Output:
+*Return:
+*Others:        .Nesterov是Momentum的变种,相当于添加了矫正因子的Momentum   參考文獻：On the importance of initialization and momentum in deep learning
+*****************************************************************/
 template <typename Dtype>
 __global__ void NesterovUpdate(int N, Dtype* g, Dtype* h,
     Dtype momentum, Dtype local_rate) {
@@ -12,6 +22,18 @@ __global__ void NesterovUpdate(int N, Dtype* g, Dtype* h,
     g[i] = (1+momentum) * hi_new - momentum * hi;
   }
 }
+
+
+/*****************************************************************
+*Function:      nesterov_update_gpu()
+*Description:   计算更新值
+*Calls:         NesterovUpdate() 
+*Called By:      
+*Input:         
+*Output:
+*Return:
+*Others:       GPU版本 
+*****************************************************************/
 template <typename Dtype>
 void nesterov_update_gpu(int N, Dtype* g, Dtype* h, Dtype momentum,
     Dtype local_rate) {

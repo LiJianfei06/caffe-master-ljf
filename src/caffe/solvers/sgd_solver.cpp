@@ -6,6 +6,19 @@
 #include "caffe/util/io.hpp"
 #include "caffe/util/upgrade_proto.hpp"
 
+
+
+/*
+实例： 
+
+base_lr: 0.01 
+lr_policy: "step"
+gamma: 0.1   
+stepsize: 1000  
+max_iter: 3500 
+momentum: 0.9
+*/
+
 namespace caffe {
 
 // Return the current learning rate. The currently implemented learning rate
@@ -292,7 +305,7 @@ void sgd_update_gpu(int N, Dtype* g, Dtype* h, Dtype momentum,
 *Input:         
 *Output:
 *Return:
-*Others:
+*Others:        计算更新值
 *****************************************************************/
 template <typename Dtype>
 void SGDSolver<Dtype>::ComputeUpdateValue(int param_id, Dtype rate) {
@@ -303,6 +316,7 @@ void SGDSolver<Dtype>::ComputeUpdateValue(int param_id, Dtype rate) {
   // Compute the update to history, then copy it to the parameter diff.
   switch (Caffe::mode()) {
   case Caffe::CPU: {
+    // Y=alpha * X + beta*Y
     caffe_cpu_axpby(net_params[param_id]->count(), local_rate,
               net_params[param_id]->cpu_diff(), momentum,
               history_[param_id]->mutable_cpu_data());
