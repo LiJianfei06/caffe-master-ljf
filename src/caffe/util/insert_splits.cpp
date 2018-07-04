@@ -9,6 +9,16 @@
 
 namespace caffe {
 
+/*****************************************************************
+*Function:      InsertSplits
+*Description:   此函数作用是，对于底层一个输出blob对应多个上层的情况，则要在加入分裂层，形成新的网络.
+*Calls:
+*Called By:     iNet<Dtype>::Init() 等
+*Input:          
+*Output:
+*Return:
+*Others:i       这么做的主要原因是多个层反传给该blob的梯度需要累加。
+*****************************************************************/
 void InsertSplits(const NetParameter& param, NetParameter* param_split) {
   // Initialize by copying from the input NetParameter.
   param_split->CopyFrom(param);

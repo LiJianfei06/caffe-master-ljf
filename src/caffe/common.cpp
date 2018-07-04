@@ -40,13 +40,23 @@ int64_t cluster_seedgen(void) {
 }
 
 
+/*****************************************************************
+*Function:      GlobalInit()
+*Description:   初始化FLAGS  
+*Calls:
+*Called By:     main()
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 void GlobalInit(int* pargc, char*** pargv) {
   // Google flags.
-  ::gflags::ParseCommandLineFlags(pargc, pargv, true);
+  ::gflags::ParseCommandLineFlags(pargc, pargv, true);  // 对gflags的参数进行了初始化
   // Google logging.
-  ::google::InitGoogleLogging(*(pargv)[0]);
+  ::google::InitGoogleLogging(*(pargv)[0]);             // 初始化谷歌日志系统
   // Provide a backtrace on segfault.
-  ::google::InstallFailureSignalHandler();
+  ::google::InstallFailureSignalHandler();              // 册信号处理句柄
 }
 
 #ifdef CPU_ONLY  // CPU-only Caffe.

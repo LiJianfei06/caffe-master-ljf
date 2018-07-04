@@ -255,8 +255,8 @@ template <> void Blob<int>::Update() { NOT_IMPLEMENTED; }
 *Called By:      
 *Input:          
 *Output:
-*Return:
-*Others:
+*Return:        
+*Others:        参数更新
 *****************************************************************/
 template <typename Dtype>
 void Blob<Dtype>::Update() {
