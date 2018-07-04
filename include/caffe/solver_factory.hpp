@@ -63,13 +63,32 @@ class SolverRegistry {
   typedef Solver<Dtype>* (*Creator)(const SolverParameter&);
   typedef std::map<string, Creator> CreatorRegistry;
 
-  //创建CreatorRegistry类型容器函数，返回其引用
+/*****************************************************************
+*Function:      Registry()
+*Description:   创建CreatorRegistry类型容器函数，返回其引用. 
+*Calls:
+*Called By:     AddCreator()\CreateSolver()\SolverTypeList() 
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
   static CreatorRegistry& Registry() {
     static CreatorRegistry* g_registry_ = new CreatorRegistry();
     return *g_registry_;
   }
 
-  // Adds a creator.// 向CreatorRegistry容器中增加Creator；
+/*****************************************************************
+*Function:      Registry()
+*Description:   Adds a creator. 向CreatorRegistry容器中增加Creator. 
+*Calls:
+*Called By:     SolverRegisterer() 
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
+  // ；
   static void AddCreator(const string& type, Creator creator) {
     CreatorRegistry& registry = Registry(); // 定义一个map的引用，通过这个函数创建一个
     CHECK_EQ(registry.count(type), 0)
@@ -77,12 +96,21 @@ class SolverRegistry {
     registry[type] = creator;
   }
 
-  // Get a solver using a SolverParameter.通过SolverParameter返回Solver指针；
-  static Solver<Dtype>* CreateSolver(const SolverParameter& param) //caffe.cpp 里的train函数会掉用这个的
+/*****************************************************************
+*Function:      CreateSolver()
+*Description:   Get a solver using a SolverParameter. 
+*Calls:
+*Called By:     ./tools/caffe.cpp:   train() 
+*Input:         const SolverParameter& param
+*Output:
+*Return:
+*Others:
+*****************************************************************/
+  static Solver<Dtype>* CreateSolver(const SolverParameter& param)
   {
     LOG(INFO) <<"function Solver<Dtype>* CreateSolver() "<<" "<< "lijianfei debug!!!!!!!!!!";
     const string& type = param.type();  // 通常的SGD
-    LOG(INFO) <<type<<" "<< "lijianfei debug!!!!!!!!!!";
+    LOG(INFO) <<"type:"<<type<<" "<< "lijianfei debug!!!!!!!!!!";
 
     CreatorRegistry& registry = Registry();//通过调用Registry（）函数，Registry()中创建CreatorRegistry类的对象，定义了一个key类型为string，value类型为Creator的map：registry.其中Creator是一个solver函数指针类型，指向的函数的参数为SolverParameter类型
     CHECK_EQ(registry.count(type), 1) << "Unknown solver type: " << type
@@ -90,7 +118,17 @@ class SolverRegistry {
     return registry[type](param);//返回registry中type对应的creator对象，并调用这个creator函数，将creator返回的Solver<Dtype>*返回
   }
 
-   //获取CreatorRegistry容器中注册过的solver类型名，string列表储存
+
+/*****************************************************************
+*Function:      SolverTypeList()
+*Description:   获取CreatorRegistry容器中注册过的solver类型名，string列表储存. 
+*Calls:         Registry()
+*Called By:     SolverTypeListString()
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
   static vector<string> SolverTypeList() {
     CreatorRegistry& registry = Registry();
     vector<string> solver_types;
@@ -104,9 +142,21 @@ class SolverRegistry {
  private:
   // Solver registry should never be instantiated - everything is done with its
   // static variables.
-  SolverRegistry() {}
+  SolverRegistry() { // 不会进入
+    //LOG(INFO)<<"SolverRegistry constructor !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
+    //while(1);
+  }
 
-  //这个函数从solver_types列表中取出一个个string
+/*****************************************************************
+*Function:      SolverTypeListString()
+*Description:   这个函数从solver_types列表中取出一个个string. 
+*Calls:         SolverTypeList()
+*Called By:     reateSolver()
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
   static string SolverTypeListString() {
     vector<string> solver_types = SolverTypeList();
     string solver_types_str;
@@ -122,10 +172,23 @@ class SolverRegistry {
 };
 
 
+
+
+
 template <typename Dtype>
 class SolverRegisterer {
  public:
-     //对SolverRegistry接口进行封装，功能是注册creator
+/*****************************************************************
+*Function:      SolverRegisterer()
+*Description:   构造函数， 对SolverRegistry接口进行封装，功能是注册creator. 
+*Calls:         AddCreator()
+*Called By:     reateSolver()
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
+     //
   SolverRegisterer(const string& type,
       Solver<Dtype>* (*creator)(const SolverParameter&)) {
     // LOG(INFO) << "Registering solver type: " << type;
