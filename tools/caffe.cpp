@@ -99,6 +99,16 @@ __Registerer_##func g_registerer_##func; \
 
 
 
+/*****************************************************************
+Function:      GetBrewFunction()
+*Description:  寻找容器中是否存在函数指针，是则返回，没有返回NULL  
+*Calls:
+*Called By:    main()
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 static BrewFunction GetBrewFunction(const caffe::string& name) {
   if (g_brew_map.count(name)) {
     return g_brew_map[name]; // 若找到这个函数就返回函数指针
@@ -148,7 +158,17 @@ caffe::Phase get_phase_from_flags(caffe::Phase default_value) {
   return caffe::TRAIN;  // Avoid warning
 }
 
-// Parse stages from flags
+
+/*****************************************************************
+Function:      get_stages_from_flags()
+*Description:  Parse stages from flags 
+*Calls:
+*Called By:    train()
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 vector<string> get_stages_from_flags() {
   vector<string> stages;
   boost::split(stages, FLAGS_stage, boost::is_any_of(","));
@@ -190,16 +210,24 @@ caffe::SolverAction::Enum GetRequestedAction(
   LOG(FATAL) << "Invalid signal effect \""<< flag_value << "\" was specified";
 }
 
-// Train / Finetune a model.
+/*****************************************************************
+*Function:      train()
+*Description:   Train / Finetune a model.  
+*Calls:
+*Called By:     main() --用函数指针形式
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 int train() {
-  CHECK_GT(FLAGS_solver.size(), 0) << "Need a solver definition to train."; // google的glog库，检查--solver、--snapshot和--weight并输出消息；必须有指定solver，snapshot和weight两者指定其一
-  CHECK(!FLAGS_snapshot.size() || !FLAGS_weights.size())
+  CHECK_GT(FLAGS_solver.size(), 0) << "Need a solver definition to train."; // google的glog库，检查 必须有指定solver
+  CHECK(!FLAGS_snapshot.size() || !FLAGS_weights.size()) // snapshot和weight两者指定其一
       << "Give a snapshot to resume training or weights to finetune "
       "but not both.";
   vector<string> stages = get_stages_from_flags();
 
-
-// 实例化SolverParameter类，该类保存solver参数和相应方法（SoverParameter是由google protobuffer编译过来的类，具体声明可以见代码文件build/src/caffe/proto/caffe.pb.h）
+  // 实例化SolverParameter类，该类保存solver参数和相应方法（SoverParameter是由google protobuffer编译过来的类，具体声明可以见代码文件build/src/caffe/proto/caffe.pb.h）
   caffe::SolverParameter solver_param;
   // 将-solver指定solver.prototxt文件内容解析到solver_param中，该函数声明在include/caffe/util/upgrade_proto.hpp中，实现在src/caffe/util/upgrade_proto.cpp中；
   caffe::ReadSolverParamsFromTextFileOrDie(FLAGS_solver, &solver_param);
@@ -207,9 +235,8 @@ int train() {
   solver_param.mutable_train_state()->set_level(FLAGS_level);
   for (int i = 0; i < stages.size(); i++) {
     solver_param.mutable_train_state()->add_stage(stages[i]);       // 这些个函数都定义在caffe.pb.h中
-    LOG(INFO) << "stages:"<<stages[i]<<"lijianfei debug!!!!!!!!!!!!";
+    LOG(INFO) << "stages:"<<stages[i]<<" lijianfei debug!!!!!!!!!!!!";
   }
-
 
   /*下面是去查询用户配置的GPU信息，用户可以在输入命令行的时候配置gpu信息，也可以在solver.prototxt 
    *   文件中定义GPU信息，如果用户在solver.prototxt里面配置了GPU的id，则将该id写入FLAGS_gpu中，如果用户 
@@ -226,7 +253,6 @@ int train() {
           FLAGS_gpu = "" + boost::lexical_cast<string>(0);
       }
   }
-
 
   /*在以下部分核验gpu检测结果，如果没有gpu信息，那么则使用cpu训练，否则，就开始一些GPU训练的初始化工作*/
   // 多GPU下，将GPU编号存入vector容器中（get_gpus()函数通过FLAGS_gpu获取）；
@@ -287,7 +313,7 @@ int train() {
   LOG(INFO) << "Starting Optimization";
   if (gpus.size() > 1) /*如果有不止一块gpu参与训练，那么将开启多gpu训练模式*/ 
   {
-#ifdef USE_NCCL
+#ifdef USE_NCCL  // 如果多GPU，安装caffe之前需要安装NCCL
     caffe::NCCL<float> nccl(solver);
     nccl.Run(gpus, FLAGS_snapshot.size() > 0 ? FLAGS_snapshot.c_str() : NULL);
 #else
@@ -467,25 +493,26 @@ int time() {
 }
 RegisterBrewFunction(time);     // RegisterBrewFunction将此函数入口添加进了g_brew_map
 
+
+
+
+
+
+
+
+
+
+/*****************************************************************
+*Function:      main()
+*Description:   主函数
+*Calls:         caffe::GlobalInit()    
+*Called By:      
+*Input:         
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 int main(int argc, char** argv) {
-
-  int test_temp=0;
-  /*google glog test：-----------
-   LOG(INFO)其实返回的是一个std::ostream，对于不同级别的日志，返回的流是不一样的。日志级别有DUBUG，INFO，ERROR，FATAL。--  */
-  LOG(INFO) << "google glog test!"<<" lijianfei debug!!!!!!!!!!";       // 输出信息，前面能显示行号(第一个字母I)
-  LOG(ERROR) << "LOG(ERROR) test!"<<" lijianfei debug!!!!!!!!!!";       // 输出信息，前面能显示行号(第一个字母E)
-  //LOG(FATAL) << "LOG(FATAL) test!"<<" lijianfei debug!!!!!!!!!!";       // 输出信息，前面能显示行号(第一个字母F)且会崩
-  test_temp=2;
-  //CHECK_EQ(test_temp, 2);   // 不相等则崩
-  //CHECK_GE(test_temp,2);        // 不是大于的就崩
-  //CHECK_LE(test_temp，2);        // 
-  //CHECK_GT(test_temp,2);        //
-
-
-
-
-
-
   // Print output to stderr (while still logging).
   FLAGS_alsologtostderr = 1;    // gflags库，具体说明紧接代码（未找到其定义，估计在gflags库文件中定义）
   // Set version
@@ -501,36 +528,30 @@ int main(int argc, char** argv) {
   // Run tool or show usage.
   
   LOG(INFO) << "argc:"<<argc<<" lijianfei debug!!!!!!!!!!";       // 训练为例: 3 
-  LOG(INFO) << "argv[0]:"<<argv[0]<<" lijianfei debug!!!!!!!!!!"; // 训练为例：./build/tools/caffe 
-  LOG(INFO) << "argv[1]:"<<argv[1]<<" lijianfei debug!!!!!!!!!!"; // 训练为例：train 
-  LOG(INFO) << "argv[2]:"<<argv[2]<<" lijianfei debug!!!!!!!!!!"; // 训练为例：--solver=examples/mnist/lenet_solver.prototxt 
+  for (int ii=0;ii<argc;++ii)
+  {
+      LOG(INFO)<<"argv["<<ii<<"]:"<<argv[ii]<<" lijianfei debug!!!!!!!!!!";
+  }
+  //LOG(INFO) << "argv[0]:"<<argv[0]<<" lijianfei debug!!!!!!!!!!"; // 训练为例：./build/tools/caffe 
+  //LOG(INFO) << "argv[1]:"<<argv[1]<<" lijianfei debug!!!!!!!!!!"; // 训练为例：train 
+  //LOG(INFO) << "argv[2]:"<<argv[2]<<" lijianfei debug!!!!!!!!!!"; // 训练为例：--solver=examples/ljftest_cifar10_ResNet/solver.prototxt 
+  //LOG(INFO) << "argv[3]:"<<argv[3]<<" lijianfei debug!!!!!!!!!!"; // 训练为例：-snapshot
+  //LOG(INFO) << "argv[4]:"<<argv[4]<<" lijianfei debug!!!!!!!!!!"; // 训练为例：examples/ljftest_cifar10_ResNet/model_save/caffe_ljftest_train_iter_25000.solverstate 
+  //return 0;
+  
+  caffe::GlobalInit(&argc, &argv);  // 初始化FLAGS. 执行完后会使argc为2
 
-  /*下面进行的是对gflags和glog的一些初始化，GlobalInit函数定义在了caffe安装目录./src/caffe/common.cpp中， 
-    在下面贴出该函数的代码 
-    void GlobalInit(int* pargc, char*** pargv) 
-    { 
-  // Google flags. 
-  ::gflags::ParseCommandLineFlags(pargc, pargv, true); 
-  // Google logging. 
-  ::google::InitGoogleLogging(*(pargv)[0]); 
-  // Provide a backtrace on segfault. 
-  ::google::InstallFailureSignalHandler(); 
-  }在该函数中，ParseCommandLineFlags函数对gflags的参数进行了初始化，InitGoogleLogging函数初始化谷歌日志系统， 
-  而InstallFailureSignalHandler注册信号处理句柄*/  
- 
-  caffe::GlobalInit(&argc, &argv);  // include/caffe/commom.hpp中声明的函数：Currently it initializes google flags and google logging.即初始化FLAGS.
   // 判断参数，参数为2，继续执行action函数，否则输出usage信息。
-
   if (argc == 2) {
 #ifdef WITH_PYTHON_LAYER
     try {
-      LOG(INFO) <<"use WITH_PYTHON_LAYER"<<" lijianfei debug!!!!!!!!!!";       // 训练为例: 3 
+      LOG(INFO) <<"use WITH_PYTHON_LAYER"<<" lijianfei debug!!!!!!!!!!"; 
+      //return 0;
 #endif
-      /*上面完成了一些初始化工作，而真正的程序入口就是下面这个GetBrewFunction函数，这个函数的主要功能为去查找g_brew_map容器， 
-       *   并在其中找到与caffe::string(argv[1])相匹配的函数并返回该函数的入口，那么，g_brew_map容器里面装的是什么呢？这个时候就要 
-       *     看看上面的#define RegisterBrewFunction(func)。*/  
+      /*上面完成了一些初始化工作，而真正的程序入口就是下面这个GetBrewFunction函数，这个函数的主要功能为去查找g_brew_map容器,并在其中找到与caffe::string(argv[1])相匹配的函数并返回该函数的入口，那么，g_brew_map容器里面装的是什么呢？这个时候就要看看上面的#define RegisterBrewFunction(func)。*/  
         /*在看完#define RegisterBrewFunction(func)之后，我们转向上文阅读一下GetBrewFunction的定义*/
-      return GetBrewFunction(caffe::string(argv[1]))(); // GetBrewFunction函数返回函数指针，对于上面标准指令，则返回train函数指针     .那么就执行函数了
+      LOG(INFO) <<"caffe::string(argv[1]):"<<caffe::string(argv[1])<<" lijianfei debug!!!!!!!!!!";  // train 
+      return GetBrewFunction(caffe::string(argv[1]))(); // 相当于执行train()函数
 #ifdef WITH_PYTHON_LAYER
     } catch (bp::error_already_set) {
       PyErr_Print();
