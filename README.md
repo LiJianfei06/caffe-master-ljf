@@ -1,20 +1,7 @@
 # Caffe
 
+#add ConvolutionDepthwise  ShuffleChannel
 #add some annotation for code of Chinese language
-
-#add ConvolutionDepthwise   layer
-
-#add ShuffleChannel   layer
-
-#add ShuffleChannel   layer
-
-#add deformable_conv  layer
-
-#add some layers of yolov2 
-
-
-#add FCN  
-
 
 
 [![Build Status](https://travis-ci.org/BVLC/caffe.svg?branch=master)](https://travis-ci.org/BVLC/caffe)
