@@ -1,0 +1,663 @@
+﻿#######我的ubuntu配置######################################
+
+安装ssh，不然远程连接不上
+sudo apt-get install openssh-server
+
+##############调整面板到左侧###############################
+>sudo apt-get install unity-tweak-tool
+>unity-tweak-tool 可以在图形界面里设置
+>gsettings set com.canonical.Unity.Launcher launcher-position Left 或者这样即可
+
+========安装oh-my-zsh===================
+按照这个网址安装zsh和oh-my-zsh： https://www.cnblogs.com/EasonJim/p/7863099.html
+
+========安装Anaconda2=====================================
+https://repo.continuum.io/archive/    
+下载conda，然后安装
+./Anaconda2-5.0.0-Linux-x86_64.sh
+
+在终端输入python发现依然是gnome自带的python版本，这是因为.bashrc的更新还没有生效，命令行输入： 
+
+source ~/.zshrc 或者 source ~/.bashrc 
+
+版本不够就:
+
+conda update conda
+
+conda update pip
+
+conda update python
+
+conda update spyder
+
+#===============linux下安装libcurl过程====下面要用到curl========
+可以从官网上下载https://curl.haxx.se/download.html，也可以命令行下载
+# tar -zvxf curl-7.51.0.tar.gz 
+# cd curl-7.51.0/
+# ./configure -prefix=/usr/local/curl
+# make
+# make install
+# export PATH=$PATH:/usr/local/curl/bin
+
+测试是否可用
+# curl http://www.baidu.com
+
+然后make编译项目
+src/main.c:6:23: 致命错误：curl/curl.h：没有那个文件或目录
+#include <curl/curl.h>
+解决方法：
+将解压后include路径下的curl文件夹复制到/usr/include
+cp -r curl-7.51.0/include/curl/ /usr/include/
+
+=====安装vim================================
+
+按照这个网址安装vim: https://www.cnblogs.com/clovn/p/6655455.html
+也就是：
+curl -O https://raw.githubusercontent.com/vince67/v7_config/master/vim.sh
+bash vim.sh
+
+
+#############安装nvidia驱动##没N卡就不用了###########################
+查看适合自己显卡的驱动
+登录 http://www.nvidia.com/Download/index.aspx?lang=en-us 查看对应打驱动版本
+接下来就是自己安装显卡驱动了：卸载你电脑中此刻有的nvidia的驱动
+sudo apt-get remove –purge nvidia*
+添加一个PPA到系统，等一下安装驱动要用的
+sudo add-apt-repository ppa:graphics-drivers/ppa
+千万记得：
+sudo apt-get update 
+sudo service lightdm stop（关闭图形界面，没照做好像也可以）
+sudo apt-get install nvidia-387（实际会安装390）
+然后就等待驱动安装好。。。。。
+
+安装好之后，运行
+sudo service lightdm start   来启动图形界面
+运行：
+nvidia-smi
+来看是不是能够输出你的GPU的一些信息
+
+#############安装CUDA###########################
+3.安装CUDA
+https://developer.nvidia.com/cuda-80-ga2-download-archive 下载CUDA ,运行
+./cuda_8.0.61_375.26_linux.run
+下面安装时要注意：执行后会有一系列提示让你确认，但是注意，有个让你选择是否安装nvidia367驱动时，一定要选择否： 
+Install NVIDIA Accelerated Graphics Driver for Linux-x86_64 367.48? 
+因为前面我们已经安装了更加新的nvidia387，所以这里不要选择安装。
+另外一个链接也选no
+其余的都直接默认或者选择是即可。 
+
+环境变量配置 
+打开
+vim ~/.bashrc 或 vim ~/.zshrc 
+将以下内容写入到部：
+export  PATH=/usr/local/cuda-8.0/bin${PATH:+:${PATH}}
+export  LD_LIBRARY_PATH=/usr/local/cuda-8.0/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+保存退出
+
+测试CUDA的samples
+cd ~/NVIDIA_CUDA-8.0_Samples/1_Utilities/deviceQuery 
+make 
+sudo ./deviceQuery 
+如果显示一些关于GPU的信息，则说明安装成功。
+-----------------------------
+配置cuDNN 
+首先去官网 https://developer.nvidia.com/rdp/cudnn-download 下载cuDNN，需要注册一个账号才能下载
+sudo tar -xvf ./cudnn-8.0-linux-x64-v6.0.solitairetheme8
+cd cuda; 
+sudo cp lib64/lib* /usr/local/cuda-8.0/lib64/; 
+sudo cp include/cudnn.h /usr/local/cuda-8.0/include/  
+更新软连接: 
+cd /usr/local/cuda-8.0/lib64/
+sudo chmod +r libcudnn.so.6.0.21
+sudo ln -sf libcudnn.so.6.0.21 libcudnn.so.6
+sudo ln -sf libcudnn.so.6 libcudnn.so
+sudo ldconfig
+请注意，请到自己解压后的lib64文件夹看这个文件libcudnn.so.5.1.0 ，电脑配置不同后面的数字型号不同，进行相应的修改，否则会报错。
+
+
+#############tensorflow-gpu###########################
+安装依赖
+sudo apt-get install python-pip python-dev
+
+pip install tensorflow-gpu==1.4 -i https://pypi.tuna.tsinghua.edu.cn/simple  #-i 后是更换镜像源，不然缓慢
+
+python
+import tensorflow as tf
+tf.__version__
+exit()
+
+
+#############设置个性，没啥用好像还会报错###########################
+
+vim ~/.bashrc 或 vim ~/.zshrc 
+加入
+export PS1="\e[0;34m[\t]\e[m \u@\h \w>"
+保存退出
+
+vim ~/.bashrc 或 vim ~/.zshrc 
+加入
+export CDPATH=/home
+保存退出
+
+#############如果老在启动时检测到系统程序错误：###########################
+gedit /etc/default/apport
+把enabled=1改为enabled=0。保存并关闭文件。
+如果我们想重新开启错误报告功能，只要再打开这个文件，把enabled设置为1就可以了。
+
+#############定时任务###########################
+
+输入crontab -e命令，根据提示直接在当前cron task文本最后面插入如下命令（记得回车）：
+* * * * * echo "====`date`===="  >> /tmp/cron_log.txt   （格式： 分　时　日　月　周　命令）
+保存退出，并通过crontab -l查看定时任务创建成功
+
+sudo service cron status     查看状态
+sudo service cron restart    重启服务  没问题可不用
+
+cat /tmp/cron_log.txt   查看有没有变化
+
+
+############在运行sudo apt-get update时出现如下信息，############################
+E: Sub-process returned an error code
+解决方法如下：
+sudo pkill -KILL appstreamcli
+
+wget -P /tmp https://launchpad.net/ubuntu/+archive/primary/+files/appstream_0.9.4-1ubuntu1_amd64.deb https://launchpad.net/ubuntu/+archive/primary/+files/libappstream3_0.9.4-1ubuntu1_amd64.deb
+
+sudo dpkg -i /tmp/appstream_0.9.4-1ubuntu1_amd64.deb /tmp/libappstream3_0.9.4-1ubuntu1_amd64.deb
+
+
+##############若什么命令都无效###############################
+命令 'ls' 可在 '/bin/ls' 处找到
+由于/bin 不在PATH 环境变量中，故无法找到该命令。
+
+执行export PATH="/usr/sbin:/usr/bin:/usr/local/bin:/usr/local/sbin:/bin:/sbin"
+
+anaconda2失效：执行export PATH=~/anaconda2/bin:$PATH
+
+
+##############安装teamviewer###############################
+
+
+sudo apt-get update
+
+sudo apt-get install -f
+
+
+sudo dpkg -i teamviewer_12.0.76279
+
+出现了Errors were encountered while processing:teamviewer:i386------------
+添加32位架构，命令如下：
+sudo dpkg --add-architecture i386
+sudo apt-get update
+在缺少依赖包的安装 需要执行：sudo apt-get -f install
+
+sudo dpkg -i teamviewer_12.0.76279
+
+
+cd /home/ljf 
+gedit .profile
+末尾加入
+if [ -e /usr/bin/teamviewer ]; 
+then
+/usr/bin/teamviewer &
+fi
+
+
+设置开机自动登录：
+
+system setting -> User Accounts -> Automatic Login (设置为ON）
+
+
+最后重启验证一下。
+
+
+
+
+#===============ubuntu下安装opencv================================================================
+先卸载自带的opencv2.4.9：
+sudo find / -name "*opencv*" -exec rm -i {} \;
+
+首先，我们需要先安装一些依赖库：
+
+sudo apt-get install build-essential cmake libgtk2.0-dev libjpeg62-dev pkg-config python-dev libtbb2 libpng-dev libtiff-dev   
+
+sudo apt-get install --assume-yes libgstreamer0.10-dev libqt4-dev libopencore-amrnb-dev libopencore-amrwb-dev libtheora-dev libvorbis-dev libxvidcore-dev x264 v4l-utils unzip
+
+sudo apt-get install ffmpeg libopencv-dev libgtk-3-dev python-numpy python3-numpy libdc1394-22 libdc1394-22-dev libjpeg-dev libpng12-dev libtiff5-dev libjasper-dev libavcodec-dev libavformat-dev libswscale-dev libxine2-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libv4l-dev libtbb-dev qtbase5-dev libfaac-dev libmp3lame-dev
+
+第二步，在opencv官方下载页面下载对应系统版本的opencv，目前我下载的是3.3.0的版本：
+在命令行中跳转到对应目录并解压，这里我解压到用户主目录下了：
+
+cd ~/
+unzip -o -d ~/ opencv-3.3.0.zip
+
+进入opencv目录里，并新建一个文件夹，命名为“release”，并进入：
+
+cd opencv-3.3.0/	
+mkdir release
+cd release
+
+重点来了，编译安装opencv：
+
+cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local -D BUILD_PYTHON_SUPPORT=ON ..  
+sudo make install
+export LD_LIBRARY_PATH=~/opencv-3.3.0/release/lib:$LD_LIBRARY_PATH  
+sudo ldconfig
+pkg-config opencv –libs  
+
+注意，make install这个步骤时间较长，且中间可能会有警告，不用管他，只要能编译到100%就行。
+然后，一切都搞定了，小试牛刀：
+
+cd ../samples/cpp/
+g++ drawing.cpp -o drawing `pkg-config opencv --libs --cflags opencv`
+其中,`pkg-config --libs --cflags opencv`是加载opencv库的一个命令，没有的话就会编译出错！！
+注意：`是键盘上Ese键正下方的那个键，不是与“同一个键的‘ ！！！
+./drawing
+不出意外的话，会出现，额，炫酷的宣传画面。
+
+查看版本：
+pkg-config --modversion opencv
+
+ldconfig -p|grep opencv_core
+如果输出3.3.0 那么恭喜你，编译并安装成功了。
+
+为了支持python 
+cd ~/opencv-3.3.0/release/lib
+cp cv2.so ~/anaconda2/lib/python2.7/site-packages
+
+#===============ubuntu下安装boost环境 ================================================================
+第一步：解压压缩包,命令如下
+cd ~/
+unzip -o -d ~/  boost_1_65_1.zip  或 tar -jxvf boost_1_65_1.tar.gz
+第二步：解压后得到文件夹boost_1_65_1,运行如下命令：
+
+cd boost_1_65_1/
+./bootstrap.sh  //这个命令类似于配好环境
+
+第三步：运行二步命令后得到一个文件，名字是bjam，运行这个文件：
+./b2    //这里需要十几分钟，完成后就代表安装成功了。
+
+参考博客：http://blog.csdn.net/yhm07/article/details/45459139
+将生成的库安装到/usr/local/lib目录下面，默认的头文件在/usr/local/include/boost目录下边。 
+sudo ./b2 install
+第四步：检验安装成功否：在linux下任意目录下创建test.cpp：
+gedit test.cpp
+
+
+#include<iostream>
+#include<boost/lexical_cast.hpp>
+int main()
+{ 
+	int a = boost::lexical_cast<int>("123456");
+	std::cout << a <<std::endl; 
+	return 0;
+}
+
+这是一个字符串转化为整数的简单程序
+运行命令:  
+g++ test.cpp -o test 
+./test
+
+将得到输出结果为：123456
+代表boost安装成功，就可以尽情使用boost的美妙了！！！
+
+
+#===============ubuntu下BLAS CBLAS 安装 ================================================================
+
+1. 编译blas，进入BLAS目录执行下面的命令
+
+cd BLAS-3.7.1
+gfortran -c -O3 *.f                # 编译所有的 .f 文件，生成 .o文件 
+ar rv libblas.a *.o                # 链接所有的 .o文件，生成 .a 文件 
+
+2. 编译cblas，进入CBLAS目录，首先根据自己的操作系统平台，
+将某个Makefiel.XXX复制为Makefile.in，
+XXX表示操作系统。
+如果是Linux，那么就将Makefile.LINUX 复制为 Makefile.in。
+
+cd ../CBLAS
+cp Makefile.LINUX Makefile.in
+cp ../BLAS-3.7.1/libblas.a testing  # 将上一步编译成功的 libblas.a 复制到 CBLAS目录下的testing子目录 
+make                                            # 编译所有的目录
+
+此时会在CBLAS安装目录下的lib目录中产生一个静态链接库文件cblas_LINUX.a，
+这个库文件和上面得到的libblas.a文件就是我们所需要的。
+
+另外还需要的就是CBLAS/include中的cblas.h头文件。
+将三个文件全部拷贝到，你需调用的应用程序源码目录中。
+
+拷贝到路径下：
+cp include/cblas.h /usr/include/
+cp lib/cblas_LINUX.a /usr/local/libcblas.a
+cp testing/libblas.a /usr/local/lib
+
+静态库的链接已经完成了，这个动态库缺少了东西。上面安装cblas的时候，发现确实是只产生了静态库，需要增加动态库。
+进入到CBLAS目录下，将静态库转为动态库：(编译caffe时会报错)
+
+gcc -shared lib/cblas_LINUX.a testing/libblas.a -o libcblas.so
+cp libcblas.so /usr/local/
+
+照着上面几步走，就可以解决没有cblas.h的问题。
+
+
+#===============ubuntu下安装dlib ================================================================
+ubuntu下安装dlib环境 :
+
+第一步：解压压缩包,命令如下
+
+cd ~/
+unzip -o -d ~/  dlib-19.7.zip  或  tar -jxvf dlib-19.7.tar.bz2
+cd dlib-19.7/examples  
+mkdir build  
+cd build     
+sudo apt-get install libsqlite3-dev  安装依赖，否则会提示fatal error: sqlite3.h: No such file or directory
+cmake ..     
+cmake --build . --config Release  
+
+这只是编译好了examples下的dlib，要想编译整个dlib库，则执行以下代码即可：
+进入dlib根目录下
+
+cd ~/dlib-19.7
+mkdir build
+cd build
+cmake ..
+make release=1 
+
+#===============ubuntu下java环境安装 ========
+1.下载jdk , jdk-8u77-linux-x64.tar.gz
+2.下载 eclipse, eclipse-jee-mars-2-linux-gtk-x86_64.tar.gz
+注：我下载的都是64位的，因为我的系统是64位系统
+
+3.将jdk解压到 /opt/jvm/文件夹中
+
+操作步骤：
+sudo mkdir /opt/jvm
+sudo tar zxvf jdk-8u77-linux-x64.tar.gz -C /opt/jvm
+
+
+4.配置jdk的环境变量，打开 /etc/profile文件（sudo gedit /etc/profile），在文件末尾添加下语句：
+
+export JAVA_HOME=/opt/jvm/jdk1.8.0_77
+export JRE_HOME=${JAVA_HOME}/jre
+export CLASSPATH=.:${JAVA_HOME}/lib:${JRE_HOME}/lib
+export PATH=${JAVA_HOME}/bin:$PATH
+
+保存后退出。
+使其立即生效：sudo source /etc/profile
+查看是否安装成功：java -version  出现
+
+5.安装 eclipse  将其解压到/opt/文件夹中
+
+sudo tar zxvf eclipse-jee-mars-2-linux-gtk-x86_64.tar.gz -C /opt/jvm
+
+
+6.创建eclipse桌面快捷方式图标。
+cd 桌面
+sudo touch eclipse.desktop
+sudo gedit eclipse.desktop
+
+输入以下内容：
+[Desktop Entry]
+Encoding=UTF-8
+Name=Eclipse
+Comment=Eclipse
+Exec=/opt/jvm/eclipse/eclipse
+Icon=/opt/jvm/eclipse/icon.xpm
+Terminal=false
+StartupNotify=true
+Type=Application
+Categories=Application;Development;
+保存。
+sudo chmod 777 eclipse.desktop 将其变为可执行文件.
+
+在桌面打开 eclipse ，结果提示没有安装JDK，JRE环境，明明我们安装过。
+解决方法：在/opt/jvm/eclipse/文件夹中创建一个指向JRE路径的软链接。
+cd /opt/jvm/eclipse/
+sudo ln -sf $JRE_HOME jre
+
+#===============ubuntu下caffe+GPU 安装 ========================
+========================================
+
+1.安装相关依赖项
+
+sudo apt-get install libprotobuf-dev libleveldb-dev libsnappy-dev libopencv-dev libhdf5-serial-dev protobuf-compiler libopenblas-dev liblapack-dev libatlas-base-dev
+
+sudo apt-get install --no-install-recommends libboost-all-dev
+
+sudo apt-get install -y python-numpy python-scipy python-matplotlib python-sklearn python-skimage python-h5py python-protobuf python-leveldb python-networkx python-nose python-pandas python-gflags ipython
+
+sudo apt-get install -y libgflags-dev libgoogle-glog-dev liblmdb-dev 
+
+
+安装opencv3.3 同上====
+
+cd caffe-master/python
+for req in $(cat requirements.txt); do pip install $req; done
+
+配置caffe
+
+git clone https://github.com/BVLC/caffe.git
+注意：若没有安装Git，需要先安装Git：
+
+sudo apt-get install git
+unzip -o  caffe-master.zip
+
+
+
+cd caffe-master/
+
+sudo cp Makefile.config.example Makefile.config
+
+sudo gedit Makefile.config  
+
+//可以都修改 
+a.若使用cudnn，则 
+将#USE_CUDNN := 1 
+修改成： 
+USE_CUDNN := 1 
+b.若使用的opencv版本是3的，则 
+将#OPENCV_VERSION := 3 
+修改为： 
+OPENCV_VERSION := 3 
+c.若要使用python来编写layer，则 
+将 #WITH_PYTHON_LAYER := 1 
+修改为 WITH_PYTHON_LAYER := 1 
+
+重要的一项 : 
+将 # Whatever else you find you need goes here. 下面的
+INCLUDE_DIRS := $(PYTHON_INCLUDE) /usr/local/include
+LIBRARY_DIRS := $(PYTHON_LIB) /usr/local/lib /usr/lib
+修改为：（主要路径间的空格）
+INCLUDE_DIRS := $(PYTHON_INCLUDE) /usr/local/include /usr/include/hdf5/serial
+LIBRARY_DIRS := $(PYTHON_LIB) /usr/local/lib /usr/lib /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/hdf5/serial 
+这是因为ubuntu16.04的文件包含位置发生了变化，尤其是需要用到的hdf5的位置，所以需要更改这一路径.
+要是你是用的anaconda的话，可能还需要改一些地方（我是没改也能用）http://blog.csdn.net/a_z666666/article/details/72853346
+还要加 LINKFLAGS := -Wl,-rpath,$(HOME)/anaconda2/lib
+
+修改makefile文件 
+打开makefile文件，做如下修改： 
+a. 将(大概409行的样子)：
+NVCCFLAGS +=-ccbin=$(CXX) -Xcompiler-fPIC $(COMMON_FLAGS)
+替换为：
+NVCCFLAGS += -D_FORCE_INLINES -ccbin=$(CXX) -Xcompiler -fPIC $(COMMON_FLAGS)
+
+b. 将（大概181行）：
+LIBRARIES += glog gflags protobuf boost_system boost_filesystem m hdf5_hl hdf5
+改为：
+LIBRARIES += glog gflags protobuf boost_system boost_filesystem m hdf5_serial_hl hdf5_serial
+
+编辑/usr/local/cuda/include/host_config.h 
+将其中的第115行注释掉： 
+将#error– unsupported GNU version! gcc versions later than 4.9 are not supported! 
+改为 
+//#error– unsupported GNU version! gcc versions later than 4.9 are not supported!
+
+
+#将一些文件复制到/usr/local/lib文件夹下：#注意自己CUDA的版本号！
+sudo cp /usr/local/cuda-8.0/lib64/libcudart.so.8.0 /usr/local/lib/libcudart.so.8.0 && sudo ldconfig
+sudo cp /usr/local/cuda-8.0/lib64/libcublas.so.8.0 /usr/local/lib/libcublas.so.8.0 && sudo ldconfig
+sudo cp /usr/local/cuda-8.0/lib64/libcurand.so.8.0 /usr/local/lib/libcurand.so.8.0 && sudo ldconfig
+sudo cp /usr/local/cuda-8.0/lib64/libcudnn.so.6 /usr/local/lib/libcudnn.so.6 && sudo ldconfig
+
+
+===修改源码（现在主要是显示）==
+cp /home/ljf/caffe-master/src/caffe/solver.cpp ./src/caffe/
+cp /home/ljf/caffe-master/include/caffe/solver.hpp ./include/caffe/
+
+编译与测试
+make clean
+make all -j16 
+make pycaffe -j16
+make test -j16 
+make runtest -j16 #使用CPU多核同时进行编译
+
+
+若出现错误：./caffe: /lib64/libz.so.1: version `ZLIB_1.2.8’ not found (required by /root/anaconda2/lib/./libpng16.so.16)
+tar zxf zlib-1.2.11.tar.gz 
+cd zlib-1.2.11 
+./configure 
+make && make install 
+cp /usr/local/lib/libz.so.1.2.11 /lib64/ 
+cd /lib64/ 
+rm libz.so.1 
+ln -s libz.so.1.2.11 libz.so.1
+
+在编译caffe runtest时候，可能出现以下问题： 
+/sbin/ldconfig.real: /usr/lib/nvidia-375/libEGL.so.1 不是符号连接 
+/sbin/ldconfig.real: /usr/lib32/nvidia-375/libEGL.so.1 不是符号连接。 
+解决方法： 
+sudo mv /usr/lib/nvidia-375/libEGL.so.1 /usr/lib/nvidia-375/libEGL.so.1.org 
+sudo mv /usr/lib32/nvidia-375/libEGL.so.1 /usr/lib32/nvidia-375/libEGL.so.1.org 
+sudo ln -s /usr/lib/nvidia-375/libEGL.so.375.39 /usr/lib/nvidia-375/libEGL.so.1 
+sudo ln -s /usr/lib32/nvidia-375/libEGL.so.375.39 /usr/lib32/nvidia-375/libEGL.so.1
+
+为了能画出网络结构，需要安装：
+conda install -c https://conda.binstar.org/sstromberg pydot
+conda install GraphViz
+pip install pydot 
+
+
+编译成功测试：
+cd caffe-master
+./data/mnist/get_mnist.sh 
+./examples/mnist/create_mnist.sh  
+./examples/mnist/train_lenet.sh
+正常跑了就行了
+后面自己的工程开始玩了
+
+
+=============faster RCNN python 版安装===========
+安装python依赖包
+pip install Cython
+pip install easydict
+
+git clone --recursive https://github.com/rbgirshick/py-faster-rcnn.git
+
+修改并编译Cython
+cd py-faster-rcnn/lib
+
+gedit setup.py 修改setup.py文件第135行
+
+'nvcc': ['-arch=sm_35',
+
+根据自己的显卡计算能力进行修改,GTX1060 是 sm_35
+
+修改Makefile.config文件和makefile
+
+这里需要注意一下,因为作者的caffe版本不支持新的cudnn加速,我们需要将
+cp /home/ljf/caffe-master/include/caffe/util/cudnn.hpp /home/ljf/py-faster-rcnn/caffe-fast-rcnn/include/caffe/util
+cp /home/ljf/caffe-master/src/caffe/util/cudnn.cpp /home/ljf/py-faster-rcnn/caffe-fast-rcnn/src/caffe/util
+cp -r /home/ljf/caffe-master/src/caffe/layers/cudnn_* /home/ljf/py-faster-rcnn/caffe-fast-rcnn/src/caffe/layers
+cp -r /home/ljf/caffe-master/include/caffe/layers/cudnn_* /home/ljf/py-faster-rcnn/caffe-fast-rcnn/include/caffe/layers
+
+修改一个include错误
+gedit /home/ljf/py-faster-rcnn/caffe-fast-rcnn/src/caffe/test/test_smooth_L1_loss_layer.cpp
+删除第十一行#include "caffe/vision_layers.hpp"
+
+编译caffe 
+cd /home/ljf/py-faster-rcnn/caffe-fast-rcnn
+mkdir build && cd build
+
+#编译CPU版本
+#cmake -DCPU_ONLY=ON -DBLAS=Open ..
+#编译GPU版本
+cmake -DBLAS=Open -DCUDA_NVCC_FLAGS=--Wno-deprecated-gpu-targets .. 
+
+# 开始编译并安装到build/install文件夹下 并发8线程
+make install -j16
+make pycaffe -j16 
+make runtest -j16  #使用CPU多核同时进行编译
+
+
+
+
+
+
+
+
+
+
+
+
+#===============tensorflow下caffe+GPU 安装 ========================
+
+
+然后
+
+export TF_BINARY_URL=https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow-0.11.0-cp27-none-linux_x86_64.whl
+
+pip install --upgrade $TF_BINARY_URL
+
+升级 TensorFlow
+
+pip install --upgrade tensorflow-gpu
+
+输入命令：
+python  
+
+然后输入：
+import tensorflow as tf  
+tf.__version__  
+
+如果报错： ImportError: libcusolver.so.8.0: cannot open shared object file: No such file or directory，那么
+sudo gedit ~/.bashrc 
+末尾加入：
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/cuda/lib64"
+export CUDA_HOME=/usr/local/cuda
+保存退出
+source ~/.bashrc
+再来看看
+
+如果报错： tensorflow ImportError: libcudnn.so.6: cannot open shared object file: No such file or directory ，那么
+pip uninstall tensorflow-gpu
+pip install tensorflow-gpu==1.4 -i https://pypi.tuna.tsinghua.edu.cn/simple 
+虽然tensorflow官网install教程里面说的是安装cudnn5.1，而tensorflow-gpu1.3已经开始去找cudnn6了（也就是说是用cudnn6编译的）。。。 理论上可以安装cudnn6试试看
+
+跑个mnist测试一下：
+python /home/ljf/tensorflow-master/tensorflow/examples/tutorials/mnist/fully_connected_feed.py
+没问题就可以了
+
+
+如果 spyder不能import tensorflow输入：
+conda install spyder
+
+
+如果报错 Loaded runtime CuDNN library: 5005 (compatibility version 5000) but source wascompiled with 5110 (compatibility version 5100)
+下载CuDNN5.1    官网 用户名：976491174@qqcom 密码：Ljf09180011
+
+1、删除原来的cudnn系统路径下的一些文件
+sudo rm -rf /usr/local/cuda/include/cudnn.h
+sudo rm -rf /usr/local/cuda/lib64/libcudnn*   #这里*是通配符，libcudnn*指的是名字中带有libcudnn的所有文件
+
+2、安装刚才解压的cudnn版本，在终端cd到刚解压的cuda文件夹，然后继续输入下面两个指令，这两个指令相当于把解压后的cuda文件夹下的一些文件拷到系统路径下面
+sudo cp include/cudnn.h /usr/local/cuda/include/
+sudo cp lib64/lib* /usr/local/cuda/lib64/       #这里*是通配符，lib*指的是名字中带有lib的所有文件
+
+cd /usr/local/cuda/lib64
+sudo chmod a+r libcudnn.so.5.1.10
+sudo ln -sf libcudnn.so.5.1.10 libcudnn.so.5
+sudo ln -sf libcudnn.so.5 libcudnn.so
+sudo ldconfig
+就可以了
+
+
