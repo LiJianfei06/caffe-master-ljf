@@ -387,8 +387,8 @@ void Net<Dtype>::FilterNet(const NetParameter& param,
     // If no include rules are specified, the layer is included by default and
     // only excluded if it meets one of the exclude rules.
     
-    LOG(INFO)<<"layer_param.include_size():"<<layer_param.include_size();
-    LOG(INFO)<<"layer_param.exclude_size():"<<layer_param.exclude_size();
+    //LOG(INFO)<<"layer_param.include_size():"<<layer_param.include_size();
+    //LOG(INFO)<<"layer_param.exclude_size():"<<layer_param.exclude_size();
 
     bool layer_included = (layer_param.include_size() == 0);
     for (int j = 0; layer_included && j < layer_param.exclude_size(); ++j) {

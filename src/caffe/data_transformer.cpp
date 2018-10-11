@@ -1,5 +1,7 @@
 #ifdef USE_OPENCV
-#include <opencv2/core/core.hpp>
+#include <opencv2/core/core.hpp>  
+#include <opencv2/highgui/highgui.hpp> 
+#include <opencv2/imgproc/imgproc.hpp>  
 #endif  // USE_OPENCV
 
 #include <string>
@@ -130,6 +132,7 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
 template<typename Dtype>
 void DataTransformer<Dtype>::Transform(const Datum& datum,
                                        Blob<Dtype>* transformed_blob) {
+  //LOG(INFO)<<"function DataTransformer<Dtype>::Transform";      // 确实到这里了
   // If datum is encoded, decode and transform the cv::image.
   if (datum.encoded()) {
 #ifdef USE_OPENCV
@@ -142,12 +145,110 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
     } else {
       cv_img = DecodeDatumToCVMatNative(datum);
     }
+    if (phase_ == TEST)
+    {
+       return Transform(cv_img, transformed_blob); 
+    }
+
+    int img_width = cv_img.cols;
+    int img_height = cv_img.rows;
+
+    
+    //LOG(INFO)<<"cv_img.channels():"<<cv_img.channels();
+    //cv::Mat cv_img_end;
+    bool is_gray=param_.force_gray();
+    if(is_gray)
+    {
+        if(1==cv_img.channels())cv::cvtColor(cv_img, cv_img, cv::COLOR_GRAY2BGR);       // 生成lmdb时候已经设置了灰度进来有问题，所以加这条
+        cv::cvtColor(cv_img, cv_img, cv::COLOR_BGR2GRAY);
+    }
+    //LOG(INFO)<<"cv_img.channels():"<<cv_img.channels();
+/*------随机腐蚀膨胀--------*/
+    cv::Mat cv_img_1;
+    int erode_dilate_scale_ = param_.erode_dilate_scale(); 
+    int g_nStructElementSize = Rand(erode_dilate_scale_*2+1)-erode_dilate_scale_;
+    //LOG(INFO)<<"g_nStructElementSize:"<<g_nStructElementSize;
+    cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(2 * abs(g_nStructElementSize) + 1, 2 * abs(g_nStructElementSize) + 1), cv::Point(abs(g_nStructElementSize), abs(g_nStructElementSize)));
+    if(g_nStructElementSize<0)
+        cv::erode(cv_img, cv_img_1, element);
+    else
+        cv::dilate(cv_img, cv_img_1, element);
+
+/*------随机旋转缩放--------*/
+    cv::Mat cv_img_2;
+    //旋转中心为图像中心    
+    //Point2f center;
+    int angle_scale_ = param_.angle_scale(); 
+    double g_angle = (Rand(angle_scale_*100*2+1)-angle_scale_*100)/100.0;
+
+    float center_scaling_ = param_.center_scaling();        // 已中心点缩放系数
+    double g_center_scaling_ =1.0 + (Rand(center_scaling_*1000*2+1)-center_scaling_*1000)/1000.0;
+
+    //LOG(INFO)<<"g_angle:"<<g_angle;
+    //LOG(INFO)<<"g_center_scaling_:"<<g_center_scaling_;
+    shared_ptr<cv::Point2f> center(new cv::Point2f);
+    center->x = img_width / 2.0;
+    center->y = img_height / 2.0;
+    //计算二维旋转的仿射变换矩阵  
+    shared_ptr<cv::Mat> M(new cv::Mat);
+    *M = cv::getRotationMatrix2D(*center, g_angle, g_center_scaling_);
+    cv::Scalar borderColor = cv::Scalar(0, 0, 0);
+    cv::warpAffine(cv_img_1, cv_img_2, *M, cv_img_1.size(), cv::INTER_LINEAR, cv::BORDER_CONSTANT, borderColor);//仿射变换 
+    center.reset();
+    M.reset();
+
+
+
+/*------随机裁剪--------*/
+    int crop_size = param_.crop_size();
+    int x_start=Rand(img_width-crop_size+1);
+    int y_start=Rand(img_height-crop_size+1);
+
+    cv::Mat imageROI = cv_img_2(cv::Rect(x_start, y_start, crop_size, crop_size));
+    cv::Mat cv_img_3=imageROI.clone();
+
+
+
+
+/*
+    string path("debug_image/");
+    static int file=0;
+    path.push_back(file/10000+'0');
+    path.push_back(file%10000/1000+'0');
+    path.push_back(file%1000/100+'0');
+    path.push_back(file%100/10+'0');
+    path.push_back(file%10/1+'0');
+    string path_origin(path);
+    path_origin.push_back('_');
+    path_origin.push_back('.');
+    path_origin.push_back('j');
+    path_origin.push_back('p');
+    path_origin.push_back('g');
+    path.push_back('.');
+    path.push_back('j');
+    path.push_back('p');
+    path.push_back('g');
+    ++file;
+    if(file>=10000)file=0;
+
+    cv::imwrite(path_origin, cv_img); 
+    cv::imwrite(path, cv_img_3); 
+
+
+
+*/
+
     // Transform the cv::image into blob.
-    return Transform(cv_img, transformed_blob);
+    
+
+
+    
+    return Transform(cv_img_3, transformed_blob);
 #else
     LOG(FATAL) << "Encoded datum requires OpenCV; compile with USE_OPENCV.";
 #endif  // USE_OPENCV
   } else {
+    //LOG(INFO)<<"datum.encoded() else";      // 确实到这里了
     if (param_.force_color() || param_.force_gray()) {
       LOG(ERROR) << "force_color and force_gray only for encoded datum";
     }

@@ -578,7 +578,20 @@ void Solver<Dtype>::Test(const int test_net_id) {
                       << " = " << loss_weight * mean_score << " loss)";
     }
     LOG(INFO) << "    Test net output #" << i << ": " << output_name << " = "
-              << mean_score << loss_msg_stream.str();
+              << mean_score << loss_msg_stream.str();           // 输出精度
+
+    static Dtype Max_acc=0;
+    static Dtype Best_iter=0;
+    if((output_name=="prob")&&(iter_>1000))     // 会保存最好的模型
+    {
+        if(Max_acc < mean_score)
+        {
+            Max_acc = mean_score;
+            Best_iter=iter_;
+            Snapshot();
+        }
+        LOG(INFO)<<"    Max_acc: "<<Max_acc<<"  with iter: "<< Best_iter;
+    }
   }
 }
 
