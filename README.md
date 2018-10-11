@@ -1,6 +1,7 @@
 # Caffe
 
 #add ConvolutionDepthwise  ShuffleChannel
+#add axpy_layer for SE-Net and modify pooling_layer for global average pooling 
 #add some annotation for code of Chinese language
 
 
