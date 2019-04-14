@@ -32,6 +32,9 @@ namespace gflags = google;
 #endif  // GFLAGS_GFLAGS_H_
 
 // Disable the copy and assignment operator for a class.
+// 禁止某个类通过构造函数直接初始化另一个类
+// 禁止某个类通过赋值来初始化另一个类
+// 不能赋值不能拷贝：将拷贝构造函数和赋值函数声明为private
 #define DISABLE_COPY_AND_ASSIGN(classname) \
 private:\
   classname(const classname&);\
@@ -43,6 +46,7 @@ private:\
   template class classname<float>; \
   template class classname<double>
 
+//初始化GPU的前向传播函数
 #define INSTANTIATE_LAYER_GPU_FORWARD(classname) \
   template void classname<float>::Forward_gpu( \
       const std::vector<Blob<float>*>& bottom, \
@@ -51,6 +55,7 @@ private:\
       const std::vector<Blob<double>*>& bottom, \
       const std::vector<Blob<double>*>& top);
 
+//初始化GPU的反向传播函数
 #define INSTANTIATE_LAYER_GPU_BACKWARD(classname) \
   template void classname<float>::Backward_gpu( \
       const std::vector<Blob<float>*>& top, \
@@ -61,6 +66,7 @@ private:\
       const std::vector<bool>& propagate_down, \
       const std::vector<Blob<double>*>& bottom)
 
+//初始化GPU的前向反向传播函数
 #define INSTANTIATE_LAYER_GPU_FUNCS(classname) \
   INSTANTIATE_LAYER_GPU_FORWARD(classname); \
   INSTANTIATE_LAYER_GPU_BACKWARD(classname)
@@ -72,6 +78,10 @@ private:\
 // See PR #1236
 namespace cv { class Mat; }
 
+
+
+//Caffe类里面有个RNG，RNG这个类里面还有个Generator类在RNG里面会用到Caffe里面的
+//Get()函数来获取一个新的Caffe类的实例。然后RNG里面用到了Generator。Generator是实际产生随机数的
 namespace caffe {
 
 // We will use the boost shared_ptr instead of the new C++11 one mainly
@@ -106,22 +116,24 @@ class Caffe {
   // Thread local context for Caffe. Moved to common.cpp instead of
   // including boost/thread.hpp to avoid a boost/NVCC issues (#1009, #1010)
   // on OSX. Also fails on Linux with CUDA 7.0.18.
+  // Get函数利用Boost的局部线程存储功能实现
   static Caffe& Get();
 
+  //Brew就是CPU，GPU的枚举类型
   enum Brew { CPU, GPU };
 
   // This random number generator facade hides boost and CUDA rng
   // implementation from one another (for cross-platform compatibility).
-  class RNG {
+  class RNG {   // random number generator 
    public:
-    RNG();
+    RNG();  // 利用系统的熵池或者时间来初始化RNG内部的generator_
     explicit RNG(unsigned int seed);
     explicit RNG(const RNG&);
     RNG& operator=(const RNG&);
     void* generator();
    private:
     class Generator;
-    shared_ptr<Generator> generator_;
+    shared_ptr<Generator> generator_;   // 指向一个构造器的指针
   };
 
   // Getters for boost rng, curand, and cublas handles
@@ -138,6 +150,7 @@ class Caffe {
   }
 #endif
 
+  //下面这一块就是设置CPU和GPU以及训练的时候线程并行数目吧
   // Returns the mode: running on CPU or GPU.
   inline static Brew mode() { return Get().mode_; }
   // The setters for the variables
@@ -169,8 +182,8 @@ class Caffe {
 
  protected:
 #ifndef CPU_ONLY
-  cublasHandle_t cublas_handle_;
-  curandGenerator_t curand_generator_;
+  cublasHandle_t cublas_handle_;        // cublas的句柄
+  curandGenerator_t curand_generator_;  // curandGenerator句柄
 #endif
   shared_ptr<RNG> random_generator_;
 
@@ -183,8 +196,9 @@ class Caffe {
 
  private:
   // The private constructor to avoid duplicate instantiation.
+  // 避免实例化
   Caffe();
-
+  // 禁止caffe这个类被复制构造函数和赋值进行构造
   DISABLE_COPY_AND_ASSIGN(Caffe);
 };
 

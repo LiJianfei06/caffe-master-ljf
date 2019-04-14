@@ -49,6 +49,7 @@ void WriteProtoToTextFile(const Message& proto, const char* filename) {
   close(fd);
 }
 
+//读取二进制文件
 bool ReadProtoFromBinaryFile(const char* filename, Message* proto) {
   int fd = open(filename, O_RDONLY);
   CHECK_NE(fd, -1) << "File not found: " << filename;
@@ -64,6 +65,7 @@ bool ReadProtoFromBinaryFile(const char* filename, Message* proto) {
   return success;
 }
 
+//写入二进制文件
 void WriteProtoToBinaryFile(const Message& proto, const char* filename) {
   fstream output(filename, ios::out | ios::trunc | ios::binary);
   CHECK(proto.SerializeToOstream(&output));
@@ -116,10 +118,20 @@ static bool matchExt(const std::string & fn,
   return false;
 }
 
+/*****************************************************************
+*Function:      ReadImageToDatum()
+*Description:   从图像文件读取数据到Datum 
+*Calls:			
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 bool ReadImageToDatum(const string& filename, const int label,
     const int height, const int width, const bool is_color,
     const std::string & encoding, Datum* datum) {
-  cv::Mat cv_img = ReadImageToCVMat(filename, height, width, is_color);
+  cv::Mat cv_img = ReadImageToCVMat(filename, height, width, is_color); // 打开图片到Mat
   if (cv_img.data) {
     if (encoding.size()) {
       if ( (cv_img.channels() == 3) == is_color && !height && !width &&
@@ -206,6 +218,7 @@ bool MapLabelToName(const LabelMap& map, const bool strict_check,
 
 
 #ifdef USE_OPENCV
+// 将Datum解码为为CVMat
 cv::Mat DecodeDatumToCVMatNative(const Datum& datum) {
   cv::Mat cv_img;
   CHECK(datum.encoded()) << "Datum not encoded";
@@ -233,9 +246,10 @@ cv::Mat DecodeDatumToCVMat(const Datum& datum, bool is_color) {
 
 // If Datum is encoded will decoded using DecodeDatumToCVMat and CVMatToDatum
 // If Datum is not encoded will do nothing
+// 对Datum进行解码
 bool DecodeDatumNative(Datum* datum) {
   if (datum->encoded()) {
-    cv::Mat cv_img = DecodeDatumToCVMatNative((*datum));
+    cv::Mat cv_img = DecodeDatumToCVMatNative((*datum)); // 将Datum解码为为CVMat
     CVMatToDatum(cv_img, datum);
     return true;
   } else {
@@ -252,6 +266,7 @@ bool DecodeDatum(Datum* datum, bool is_color) {
   }
 }
 
+// 将CVMat转换到Datum
 void CVMatToDatum(const cv::Mat& cv_img, Datum* datum) {
   CHECK(cv_img.depth() == CV_8U) << "Image data type must be unsigned byte";
   datum->set_channels(cv_img.channels());

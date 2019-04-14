@@ -91,13 +91,14 @@ void SoftmaxLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
   int count = bottom[0]->count();
   int channels = top[0]->shape(softmax_axis_);
   caffe_copy(count, bottom_data, top_data);
+  // 下面的步骤和cpu版本的是一样的，只是用GPU实现了
   // We need to subtract the max to avoid numerical issues, compute the exp,
   // and then normalize.
   // compute max
   // NOLINT_NEXT_LINE(whitespace/operators)
   kernel_channel_max<Dtype><<<CAFFE_GET_BLOCKS(outer_num_ * inner_num_),
       CAFFE_CUDA_NUM_THREADS>>>(outer_num_, channels, inner_num_, top_data,
-      scale_data);
+      scale_data);  // scale_data会记录每个batch的最大值
   // subtract
   // NOLINT_NEXT_LINE(whitespace/operators)
   kernel_channel_subtract<Dtype><<<CAFFE_GET_BLOCKS(count),

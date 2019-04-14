@@ -13,7 +13,7 @@ __global__ void SoftmaxLossForwardGPU(const int nthreads,
           const int num, const int dim, const int spatial_dim,
           const bool has_ignore_label_, const int ignore_label_,
           Dtype* counts) {
-  CUDA_KERNEL_LOOP(index, nthreads) {
+  CUDA_KERNEL_LOOP(index, nthreads) {  // 线程索引超了就不会多余执行
     const int n = index / spatial_dim;
     const int s = index % spatial_dim;
     const int label_value = static_cast<int>(label[n * spatial_dim + s]);
@@ -31,11 +31,11 @@ __global__ void SoftmaxLossForwardGPU(const int nthreads,
 template <typename Dtype>
 void SoftmaxWithLossLayer<Dtype>::Forward_gpu(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
-  softmax_layer_->Forward(softmax_bottom_vec_, softmax_top_vec_);
-  const Dtype* prob_data = prob_.gpu_data();
-  const Dtype* label = bottom[1]->gpu_data();
-  const int dim = prob_.count() / outer_num_;
-  const int nthreads = outer_num_ * inner_num_;
+  softmax_layer_->Forward(softmax_bottom_vec_, softmax_top_vec_);// 先前向跑一遍softmax
+  const Dtype* prob_data = prob_.gpu_data();    // softmax计算过的概率值
+  const Dtype* label = bottom[1]->gpu_data();   // 标签值
+  const int dim = prob_.count() / outer_num_;   // 就是几分类 看代码可以假设10
+  const int nthreads = outer_num_ * inner_num_; // 就是batch，假设64
   // Since this memory is not used for anything, we use it here to avoid having
   // to allocate new GPU memory to accumulate intermediate results.
   Dtype* loss_data = bottom[0]->mutable_gpu_diff();
@@ -43,11 +43,12 @@ void SoftmaxWithLossLayer<Dtype>::Forward_gpu(
   // to avoid having to allocate additional GPU memory.
   Dtype* counts = prob_.mutable_gpu_diff();
   // NOLINT_NEXT_LINE(whitespace/operators)
+  // 计算好loss存放在
   SoftmaxLossForwardGPU<Dtype><<<CAFFE_GET_BLOCKS(nthreads),
       CAFFE_CUDA_NUM_THREADS>>>(nthreads, prob_data, label, loss_data,
       outer_num_, dim, inner_num_, has_ignore_label_, ignore_label_, counts);
   Dtype loss;
-  caffe_gpu_asum(nthreads, loss_data, &loss);
+  caffe_gpu_asum(nthreads, loss_data, &loss);   // 数组求和，存放在loss里
   Dtype valid_count = -1;
   // Only launch another CUDA kernel if we actually need the count of valid
   // outputs.

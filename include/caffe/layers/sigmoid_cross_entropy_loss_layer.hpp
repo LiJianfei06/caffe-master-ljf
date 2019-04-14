@@ -42,7 +42,7 @@ namespace caffe {
  *      @f$
  */
 template <typename Dtype>
-class SigmoidCrossEntropyLossLayer : public LossLayer<Dtype> {
+class SigmoidCrossEntropyLossLayer : public LossLayer<Dtype> { // 公有继承自LossLayer
  public:
   explicit SigmoidCrossEntropyLossLayer(const LayerParameter& param)
       : LossLayer<Dtype>(param),

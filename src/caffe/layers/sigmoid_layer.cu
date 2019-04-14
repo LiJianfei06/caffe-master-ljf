@@ -5,6 +5,16 @@
 
 namespace caffe {
 
+/*****************************************************************
+Function:      sigmoid()
+*Description:  sigmoid 激活函数  GPU实现前向传播 设备函数
+*Calls:
+*Called By:    SigmoidLayer<Dtype>::Forward_gpu() 
+*Input:         
+*Output:
+*Return:
+*Others:       利用 tanh()  函数间接实现 双曲正切函数 在cmath里
+*****************************************************************/
 template <typename Dtype>
 __global__ void SigmoidForward(const int n, const Dtype* in, Dtype* out) {
   CUDA_KERNEL_LOOP(index, n) {
@@ -12,6 +22,16 @@ __global__ void SigmoidForward(const int n, const Dtype* in, Dtype* out) {
   }
 }
 
+/*****************************************************************
+Function:      SigmoidLayer<Dtype>::Forward_gpu()
+*Description:  GPU 实现 sigmoid 激活函数前向传播 
+*Calls:        SigmoidForward()
+*Called By:     
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 void SigmoidLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
@@ -29,6 +49,16 @@ void SigmoidLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
   //     << " threads: " << CAFFE_CUDA_NUM_THREADS;
 }
 
+/*****************************************************************
+Function:      SigmoidBackward()
+*Description:  sigmoid 激活函数  GPU实现反向传播的设备函数，求个导
+*Calls:
+*Called By:    SigmoidLayer<Dtype>::Backward_gpu 
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 __global__ void SigmoidBackward(const int n, const Dtype* in_diff,
     const Dtype* out_data, Dtype* out_diff) {
@@ -38,6 +68,16 @@ __global__ void SigmoidBackward(const int n, const Dtype* in_diff,
   }
 }
 
+/*****************************************************************
+Function:      SigmoidLayer<Dtype>::Backward_gpu()
+*Description:  GPU 实现 sigmoid 激活函数反向传播 
+*Calls:        SigmoidBackward()
+*Called By:     
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 void SigmoidLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down,

@@ -16,7 +16,7 @@ namespace caffe {
  *        element.
  */
 template <typename Dtype>
-class NeuronLayer : public Layer<Dtype> {
+class NeuronLayer : public Layer<Dtype> { // 公有继承自Layer类
  public:
   explicit NeuronLayer(const LayerParameter& param)
      : Layer<Dtype>(param) {}

@@ -17,6 +17,7 @@ __global__ void SigmoidCrossEntropyLossForwardGPU(const int nthreads,
       loss[i] = 0;
       counts[i] = 0;
     } else {
+        // 损失函数
       loss[i] = input_data[i] * (target[i] - (input_data[i] >= 0)) -
           log(1 + exp(input_data[i] - 2 * input_data[i] *
           (input_data[i] >= 0)));
@@ -25,6 +26,7 @@ __global__ void SigmoidCrossEntropyLossForwardGPU(const int nthreads,
   }
 }
 
+// 只是为了挑出0损失
 template <typename Dtype>
 __global__ void SigmoidCrossEntropyLossIgnoreDiffGPU(const int count,
     const int ignore_label, const Dtype* target, Dtype* diff) {
@@ -89,7 +91,7 @@ void SigmoidCrossEntropyLossLayer<Dtype>::Backward_gpu(
     const Dtype* target = bottom[1]->gpu_data();
     Dtype* bottom_diff = bottom[0]->mutable_gpu_diff();
     caffe_copy(count, sigmoid_output_data, bottom_diff);
-    caffe_gpu_axpy(count, Dtype(-1), target, bottom_diff);
+    caffe_gpu_axpy(count, Dtype(-1), target, bottom_diff);      // 相减
     // Zero out gradient of ignored targets.
     if (has_ignore_label_) {
       // NOLINT_NEXT_LINE(whitespace/operators)

@@ -7,6 +7,16 @@
 
 namespace caffe {
 
+/*****************************************************************
+Function:      TanHForward()
+*Description:  tanh 激活函数  GPU实现前向传播 设备函数
+*Calls:
+*Called By:    TanHLayer<Dtype>::Forward_gpu() 
+*Input:         
+*Output:
+*Return:
+*Others:       利用 tanh()  函数实现 双曲正切函数 在cmath里
+*****************************************************************/
 template <typename Dtype>
 __global__ void TanHForward(const int n, const Dtype* in, Dtype* out) {
   CUDA_KERNEL_LOOP(index, n) {
@@ -14,6 +24,16 @@ __global__ void TanHForward(const int n, const Dtype* in, Dtype* out) {
   }
 }
 
+/*****************************************************************
+Function:      TanHLayer<Dtype>::Forward_gpu()
+*Description:  GPU 实现 tanh 激活函数前向传播 
+*Calls:        TanHForward()
+*Called By:     
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 void TanHLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
@@ -26,15 +46,35 @@ void TanHLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
   CUDA_POST_KERNEL_CHECK;
 }
 
+/*****************************************************************
+Function:      TanHBackward()
+*Description:  tanh 激活函数  GPU实现 反向传播设备函数
+*Calls:
+*Called By:    TanHLayer<Dtype>::Backward_gpu() 
+*Input:         
+*Output:
+*Return:
+*Others:       利用 tanh()  函数实现 双曲正切函数 在cmath里
+*****************************************************************/
 template <typename Dtype>
 __global__ void TanHBackward(const int n, const Dtype* in_diff,
     const Dtype* out_data, Dtype* out_diff) {
   CUDA_KERNEL_LOOP(index, n) {
     Dtype tanhx = out_data[index];
-    out_diff[index] = in_diff[index] * (1 - tanhx * tanhx);
+    out_diff[index] = in_diff[index] * (1 - tanhx * tanhx);     // 激活函数求导
   }
 }
 
+/*****************************************************************
+Function:      TanHLayer<Dtype>::Backward_gpu()
+*Description:  GPU 实现 tanh 激活函数反向传播 
+*Calls:        TanHBackward()
+*Called By:     
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 void TanHLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down,

@@ -6,6 +6,16 @@
 
 namespace caffe { namespace db {
 
+/*****************************************************************
+*Function:      GetDB(DataParameter::DB backend)
+*Description:   根据数据类型new一个类
+*Calls:			GetDB(DataParameter::DB backend)
+*Called By:      
+*Input:          
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 DB* GetDB(DataParameter::DB backend) {
   switch (backend) {
 #ifdef USE_LEVELDB
@@ -22,6 +32,16 @@ DB* GetDB(DataParameter::DB backend) {
   }
 }
 
+/*****************************************************************
+*Function:      GetDB(const string& backend)
+*Description:   根据数据类型new一个类
+*Calls:			GetDB(const string& backend)
+*Called By:      
+*Input:         "leveldb" or "lmdb" 
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 DB* GetDB(const string& backend) {
 #ifdef USE_LEVELDB
   if (backend == "leveldb") {

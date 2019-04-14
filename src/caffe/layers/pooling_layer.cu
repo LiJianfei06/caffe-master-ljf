@@ -7,6 +7,17 @@
 
 namespace caffe {
 
+
+/*****************************************************************
+Function:      MaxPoolForward()
+*Description:  GPU实现Pooling layer的前向传播，Max   
+*Calls:
+*Called By:    PoolingLayer<Dtype>::Forward_gpu()
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 __global__ void MaxPoolForward(const int nthreads,
     const Dtype* const bottom_data, const int num, const int channels,
@@ -14,7 +25,7 @@ __global__ void MaxPoolForward(const int nthreads,
     const int pooled_width, const int kernel_h, const int kernel_w,
     const int stride_h, const int stride_w, const int pad_h, const int pad_w,
     Dtype* const top_data, int* mask, Dtype* top_mask) {
-  CUDA_KERNEL_LOOP(index, nthreads) {
+  CUDA_KERNEL_LOOP(index, nthreads) {       // 防止溢出，有时可能一个线程计算两个数据
     const int pw = index % pooled_width;
     const int ph = (index / pooled_width) % pooled_height;
     const int c = (index / pooled_width / pooled_height) % channels;
@@ -37,15 +48,25 @@ __global__ void MaxPoolForward(const int nthreads,
         }
       }
     }
-    top_data[index] = maxval;
+    top_data[index] = maxval;       // 存储最大值
     if (mask) {
       mask[index] = maxidx;
     } else {
-      top_mask[index] = maxidx;
+      top_mask[index] = maxidx;     // 记录索引
     }
   }
 }
 
+/*****************************************************************
+Function:      AvePoolForward()
+*Description:  GPU实现Pooling layer的前向传播，Ave
+*Calls:
+*Called By:    PoolingLayer<Dtype>::Forward_gpu()
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 __global__ void AvePoolForward(const int nthreads,
     const Dtype* const bottom_data, const int num, const int channels,
@@ -79,24 +100,37 @@ __global__ void AvePoolForward(const int nthreads,
   }
 }
 
+/*****************************************************************
+Function:      GlobalAvePoolForward()
+*Description:  全局平均池化 
+*Calls:
+*Called By:    PoolingLayer<Dtype>::Forward_gpu()
+*Input:         
+*Output:
+*Return:
+*Others:       在queeze-and-Excitation Networks论文中针对全局平均池化被改进(效率高) 
+*****************************************************************/
 template <typename Dtype>
 __global__ void GlobalAvePoolForward(const int spatial_dim, 
     const Dtype* bottom_data, Dtype* top_data) {
-  __shared__ Dtype buffer[CAFFE_CUDA_NUM_THREADS];
-  unsigned int tid = threadIdx.x;
+  __shared__ Dtype buffer[CAFFE_CUDA_NUM_THREADS];  // 每个线程块有一个，线程里共享
+  unsigned int tid = threadIdx.x;   // 该线程的索引
   buffer[tid] = 0;
-  __syncthreads();
+  __syncthreads();                  // 等待同步
 
+  // spatial_dim=WxH
+  // blockDim.x=512 or 1024
   for (int j = tid; j < spatial_dim; j += blockDim.x) {
     buffer[tid] += bottom_data[blockIdx.x * spatial_dim + j];
   }
-  __syncthreads();
+  __syncthreads();                  // 等待同步
 
+  // 把一个线程块里的所有线程的数据都累计到buffer[0]
   for (int i = blockDim.x / 2; i > 0; i >>= 1) {
     if (tid < i) {
       buffer[threadIdx.x] += buffer[threadIdx.x + i];
     }
-    __syncthreads();
+    __syncthreads();                // 必须等待同步
   }
 
   if (tid == 0) {
@@ -179,6 +213,16 @@ __global__ void StoPoolForwardTest(const int nthreads,
 }
 
 
+/*****************************************************************
+Function:      PoolingLayer<Dtype>::Forward_gpu()
+*Description:  GPU实现Pooling layer的前向传播，Max、Ave、Stochastic三种方法实现 
+*Calls:
+*Called By:    
+*Input:         
+*Output:
+*Return:
+*Others:        
+*****************************************************************/
 template <typename Dtype>
 void PoolingLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
@@ -186,7 +230,7 @@ void PoolingLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
   Dtype* top_data = top[0]->mutable_gpu_data();
   int count = top[0]->count();
   // We'll output the mask to top[1] if it's of size >1.
-  const bool use_top_mask = top.size() > 1;
+  const bool use_top_mask = top.size() > 1;     // 将mask信息输出到top[1],如果top大于1
   int* mask = NULL;
   Dtype* top_mask = NULL;
   switch (this->layer_param_.pooling_param().pool()) {
@@ -244,6 +288,16 @@ void PoolingLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
 }
 
 
+/*****************************************************************
+Function:      MaxPoolBackward()
+*Description:  GPU实现Pooling layer的反向传播，Max
+*Calls:
+*Called By:    PoolingLayer<Dtype>::Backward_gpu()
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 __global__ void MaxPoolBackward(const int nthreads, const Dtype* const top_diff,
     const int* const mask, const Dtype* const top_mask, const int num,
@@ -290,6 +344,16 @@ __global__ void MaxPoolBackward(const int nthreads, const Dtype* const top_diff,
   }
 }
 
+/*****************************************************************
+Function:      AvePoolBackward()
+*Description:  GPU实现Pooling layer的反向传播，Ave
+*Calls:
+*Called By:    PoolingLayer<Dtype>::Backward_gpu()
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 __global__ void AvePoolBackward(const int nthreads, const Dtype* const top_diff,
     const int num, const int channels, const int height,
@@ -326,6 +390,16 @@ __global__ void AvePoolBackward(const int nthreads, const Dtype* const top_diff,
   }
 }
 
+/*****************************************************************
+Function:      GlobalAvePoolBackward()
+*Description:  全局平均池化 反向传导
+*Calls:
+*Called By:    PoolingLayer<Dtype>::Backward_gpu()
+*Input:         
+*Output:
+*Return:
+*Others:       在queeze-and-Excitation Networks论文中针对全局平均池化被改进(效率高) 
+*****************************************************************/
 template <typename Dtype> 
 __global__ void GlobalAvePoolBackward(const int nthreads, const int spatial_dim, 
     const Dtype* top_diff, Dtype* bottom_diff) {
@@ -369,6 +443,16 @@ __global__ void StoPoolBackward(const int nthreads,
 }
 
 
+/*****************************************************************
+Function:      PoolingLayer<Dtype>::Backward_gpu()
+*Description:  GPU实现Pooling layer的反向传播，Max、Ave、Stochastic三种方法实现 
+*Calls:
+*Called By:    
+*Input:         
+*Output:
+*Return:
+*Others:        
+*****************************************************************/
 template <typename Dtype>
 void PoolingLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {

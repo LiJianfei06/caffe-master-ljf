@@ -7,6 +7,16 @@
 
 namespace caffe {
 
+/*****************************************************************
+Function:      TanHLayer<Dtype>::Forward_cpu()
+*Description:  tanh 激活函数  CPU实现前向传播
+*Calls:        tanh()
+*Called By:     
+*Input:         
+*Output:
+*Return:
+*Others:       利用 tanh()  双曲正切函数 在cmath里
+*****************************************************************/
 template <typename Dtype>
 void TanHLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
@@ -18,6 +28,16 @@ void TanHLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   }
 }
 
+/*****************************************************************
+Function:      TanHLayer<Dtype>::Backward_cpu()
+*Description:  tanh 激活函数  CPU实现反向传播
+*Calls:        
+*Called By:     
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 void TanHLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down,
@@ -30,7 +50,7 @@ void TanHLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     Dtype tanhx;
     for (int i = 0; i < count; ++i) {
       tanhx = top_data[i];
-      bottom_diff[i] = top_diff[i] * (1 - tanhx * tanhx);
+      bottom_diff[i] = top_diff[i] * (1 - tanhx * tanhx);   // 激活函数求导
     }
   }
 }

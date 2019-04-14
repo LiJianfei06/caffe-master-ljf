@@ -11,13 +11,14 @@ template <typename Dtype>
 void SoftmaxWithLossLayer<Dtype>::LayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   LossLayer<Dtype>::LayerSetUp(bottom, top);
-  LayerParameter softmax_param(this->layer_param_);
+  LayerParameter softmax_param(this->layer_param_);     // 初始化
   softmax_param.set_type("Softmax");
-  softmax_layer_ = LayerRegistry<Dtype>::CreateLayer(softmax_param);
+  softmax_layer_ = LayerRegistry<Dtype>::CreateLayer(softmax_param);// 创建softmax_layer
   softmax_bottom_vec_.clear();
   softmax_bottom_vec_.push_back(bottom[0]);
   softmax_top_vec_.clear();
-  softmax_top_vec_.push_back(&prob_);
+  softmax_top_vec_.push_back(&prob_);   // 存放预测出的概率的
+  //一个指向softmax_layer_指针 并设置该层 softmax层的输出与输入一致
   softmax_layer_->SetUp(softmax_bottom_vec_, softmax_top_vec_);
 
   has_ignore_label_ =
@@ -41,7 +42,7 @@ void SoftmaxWithLossLayer<Dtype>::Reshape(
   LossLayer<Dtype>::Reshape(bottom, top);
   softmax_layer_->Reshape(softmax_bottom_vec_, softmax_top_vec_);
   softmax_axis_ =
-      bottom[0]->CanonicalAxisIndex(this->layer_param_.softmax_param().axis());
+      bottom[0]->CanonicalAxisIndex(this->layer_param_.softmax_param().axis());// 默认1
   outer_num_ = bottom[0]->count(0, softmax_axis_);
   inner_num_ = bottom[0]->count(softmax_axis_ + 1);
   CHECK_EQ(outer_num_ * inner_num_, bottom[1]->count())
@@ -89,9 +90,9 @@ template <typename Dtype>
 void SoftmaxWithLossLayer<Dtype>::Forward_cpu(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   // The forward pass computes the softmax prob values.
-  softmax_layer_->Forward(softmax_bottom_vec_, softmax_top_vec_);
+  softmax_layer_->Forward(softmax_bottom_vec_, softmax_top_vec_);   // 通过SoftmaxLayer映射成概率
   const Dtype* prob_data = prob_.cpu_data();
-  const Dtype* label = bottom[1]->cpu_data();
+  const Dtype* label = bottom[1]->cpu_data(); // 如果batch是64那就是64个数字
   int dim = prob_.count() / outer_num_;
   int count = 0;
   Dtype loss = 0;
@@ -104,7 +105,7 @@ void SoftmaxWithLossLayer<Dtype>::Forward_cpu(
       DCHECK_GE(label_value, 0);
       DCHECK_LT(label_value, prob_.shape(softmax_axis_));
       loss -= log(std::max(prob_data[i * dim + label_value * inner_num_ + j],
-                           Dtype(FLT_MIN)));
+                           Dtype(FLT_MIN)));    // 损失函数
       ++count;
     }
   }
@@ -124,18 +125,20 @@ void SoftmaxWithLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
   if (propagate_down[0]) {
     Dtype* bottom_diff = bottom[0]->mutable_cpu_diff();
     const Dtype* prob_data = prob_.cpu_data();
-    caffe_copy(prob_.count(), prob_data, bottom_diff);
+    caffe_copy(prob_.count(), prob_data, bottom_diff); // 先将正向传导时计算的prob_数据(f(y_k))拷贝至偏导
     const Dtype* label = bottom[1]->cpu_data();
     int dim = prob_.count() / outer_num_;
     int count = 0;
-    for (int i = 0; i < outer_num_; ++i) {
-      for (int j = 0; j < inner_num_; ++j) {
+    for (int i = 0; i < outer_num_; ++i) { //outer_num_=batch_size
+      for (int j = 0; j < inner_num_; ++j) {//inner_num_=1
         const int label_value = static_cast<int>(label[i * inner_num_ + j]);
         if (has_ignore_label_ && label_value == ignore_label_) {
           for (int c = 0; c < bottom[0]->shape(softmax_axis_); ++c) {
             bottom_diff[i * dim + c * inner_num_ + j] = 0;
           }
         } else {
+            // 计算偏导，预测正确的bottom_diff = f(y_k) - 1，其它不变
+            //偏导数计算,根据推导的公式，SoftmaxlossLayer层的梯度只在label所在的神经元更新，其余神经元的梯度即原输入。 推导过程参考博客：https://blog.csdn.net/templarzq/article/details/54171225
           bottom_diff[i * dim + label_value * inner_num_ + j] -= 1;
           ++count;
         }

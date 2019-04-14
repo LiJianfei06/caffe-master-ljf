@@ -5,6 +5,16 @@
 
 namespace caffe {
 
+/*****************************************************************
+Function:      ReLUForward()
+*Description:  relu 激活函数  GPU 设备函数
+*Calls:        
+*Called By:    ReLULayer<Dtype>::Forward_gpu() 
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 __global__ void ReLUForward(const int n, const Dtype* in, Dtype* out,
     Dtype negative_slope) {
@@ -13,6 +23,16 @@ __global__ void ReLUForward(const int n, const Dtype* in, Dtype* out,
   }
 }
 
+/*****************************************************************
+Function:      ReLULayer<Dtype>::Forward_gpu()
+*Description:  relu 激活函数  GPU实现前向传播
+*Calls:        ReLUForward()
+*Called By:     
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 void ReLULayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
@@ -31,6 +51,16 @@ void ReLULayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
   //     << " threads: " << CAFFE_CUDA_NUM_THREADS;
 }
 
+/*****************************************************************
+Function:      ReLUBackward()
+*Description:  relu 激活函数  GPU 调用函数
+*Calls:        ReLUForward()
+*Called By:    ReLULayer<Dtype>::Backward_gpu() 
+*Input:         
+*Output:
+*Return:
+*Others:       等效于求个导 
+*****************************************************************/
 template <typename Dtype>
 __global__ void ReLUBackward(const int n, const Dtype* in_diff,
     const Dtype* in_data, Dtype* out_diff, Dtype negative_slope) {
@@ -40,6 +70,16 @@ __global__ void ReLUBackward(const int n, const Dtype* in_diff,
   }
 }
 
+/*****************************************************************
+Function:      ReLULayer<Dtype>::Backward_gpu()
+*Description:  relu 激活函数  GPU实现反向传播
+*Calls:        ReLUBackward()
+*Called By:     
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 void ReLULayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down,

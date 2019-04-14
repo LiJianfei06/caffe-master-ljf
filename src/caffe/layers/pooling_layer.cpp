@@ -10,11 +10,21 @@ namespace caffe {
 using std::min;
 using std::max;
 
+/*****************************************************************
+Function:      PoolingLayer<Dtype>::LayerSetUp()
+*Description:  参数初始化，通过类PoolingParameter获取成员变量值  
+*Calls:
+*Called By:    
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 void PoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
-  PoolingParameter pool_param = this->layer_param_.pooling_param();
-  if (pool_param.global_pooling()) {
+  PoolingParameter pool_param = this->layer_param_.pooling_param();     // 获取参数
+  if (pool_param.global_pooling()) {                    // 是否全局池化
     CHECK(!(pool_param.has_kernel_size() ||
       pool_param.has_kernel_h() || pool_param.has_kernel_w()))
       << "With Global_pooling: true Filter size cannot specified";
@@ -26,6 +36,7 @@ void PoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       (pool_param.has_kernel_h() && pool_param.has_kernel_w()))
       << "For non-square filters both kernel_h and kernel_w are required.";
   }
+  // 检查pad参数
   CHECK((!pool_param.has_pad() && pool_param.has_pad_h()
       && pool_param.has_pad_w())
       || (!pool_param.has_pad_h() && !pool_param.has_pad_w()))
@@ -35,7 +46,7 @@ void PoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       || (!pool_param.has_stride_h() && !pool_param.has_stride_w()))
       << "Stride is stride OR stride_h and stride_w are required.";
   global_pooling_ = pool_param.global_pooling();
-  if (global_pooling_) {
+  if (global_pooling_) {    // 全局池化的宽高等于整幅特征图
     kernel_h_ = bottom[0]->height();
     kernel_w_ = bottom[0]->width();
   } else {
@@ -75,11 +86,21 @@ void PoolingLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   }
 }
 
+/*****************************************************************
+Function:      PoolingLayer<Dtype>::Reshape()
+*Description:  调整top blobs的shape，并有可能会reshape rand_idx_或max_idx_  
+*Calls:
+*Called By:    
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 void PoolingLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   CHECK_EQ(4, bottom[0]->num_axes()) << "Input must have 4 axes, "
-      << "corresponding to (num, channels, height, width)";
+      << "corresponding to (num, channels, height, width)";     // 检查维度
   channels_ = bottom[0]->channels();
   height_ = bottom[0]->height();
   width_ = bottom[0]->width();
@@ -87,13 +108,16 @@ void PoolingLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
     kernel_h_ = bottom[0]->height();
     kernel_w_ = bottom[0]->width();
   }
+  // 计算降采样后图像尺寸
   pooled_height_ = static_cast<int>(ceil(static_cast<float>(
       height_ + 2 * pad_h_ - kernel_h_) / stride_h_)) + 1;
   pooled_width_ = static_cast<int>(ceil(static_cast<float>(
       width_ + 2 * pad_w_ - kernel_w_) / stride_w_)) + 1;
+
   if (pad_h_ || pad_w_) {
     // If we have padding, ensure that the last pooling starts strictly
     // inside the image (instead of at the padding); otherwise clip the last.
+    // 如果有图像补齐，则需要确保不发生越界，否则不做最后一个采样点
     if ((pooled_height_ - 1) * stride_h_ >= height_ + pad_h_) {
       --pooled_height_;
     }
@@ -104,7 +128,7 @@ void PoolingLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
     CHECK_LT((pooled_width_ - 1) * stride_w_, width_ + pad_w_);
   }
   top[0]->Reshape(bottom[0]->num(), channels_, pooled_height_,
-      pooled_width_);
+      pooled_width_);   // 设置输出层的NCHW
   if (top.size() > 1) {
     top[1]->ReshapeLike(*top[0]);
   }
@@ -124,6 +148,16 @@ void PoolingLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
 
 // TODO(Yangqing): Is there a faster way to do pooling in the channel-first
 // case?
+/*****************************************************************
+Function:      PoolingLayer<Dtype>::Forward_cpu()
+*Description:  CPU实现Pooling layer的前向传播，仅有Max和Ave两种方法实现 
+*Calls:
+*Called By:    
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 void PoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
@@ -131,7 +165,7 @@ void PoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   Dtype* top_data = top[0]->mutable_cpu_data();
   const int top_count = top[0]->count();
   // We'll output the mask to top[1] if it's of size >1.
-  const bool use_top_mask = top.size() > 1;
+  const bool use_top_mask = top.size() > 1;     // 将mask信息输出到top[1],如果top大于1
   int* mask = NULL;  // suppress warnings about uninitalized variables
   Dtype* top_mask = NULL;
   // Different pooling methods. We explicitly do the switch outside the for
@@ -175,6 +209,7 @@ void PoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
           }
         }
         // compute offset
+        // 加上偏移，跳转到下一幅图像
         bottom_data += bottom[0]->offset(0, 1);
         top_data += top[0]->offset(0, 1);
         if (use_top_mask) {
@@ -226,6 +261,17 @@ void PoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   }
 }
 
+
+/*****************************************************************
+Function:      PoolingLayer<Dtype>::Backward_cpu()
+*Description:  CPU实现Pooling layer的反向传播，仅有Max和Ave两种方法实现 
+*Calls:
+*Called By:    
+*Input:         
+*Output:
+*Return:
+*Others:       
+*****************************************************************/
 template <typename Dtype>
 void PoolingLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
@@ -299,7 +345,7 @@ void PoolingLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     }
     break;
   case PoolingParameter_PoolMethod_STOCHASTIC:
-    NOT_IMPLEMENTED;
+    NOT_IMPLEMENTED;    // 随机采样尚未在CPU端实现
     break;
   default:
     LOG(FATAL) << "Unknown pooling method.";

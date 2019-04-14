@@ -7,26 +7,38 @@
 
 namespace caffe { namespace db {
 
+
+/*****************************************************************
+*Function:      LMDB::Open()
+*Description:   创建一个操作环境
+*Calls:			Open(const string& source, Mode mode)
+*Called By:      
+*Input:         source:路径 ; Mode mode:db::READ or db::NEW 
+*Output:
+*Return:
+*Others:
+*****************************************************************/
 void LMDB::Open(const string& source, Mode mode) {
   MDB_CHECK(mdb_env_create(&mdb_env_));
   if (mode == NEW) {
+      // 如果为NEW, 则创建一个source的路径
     CHECK_EQ(mkdir(source.c_str(), 0744), 0) << "mkdir " << source << " failed";
   }
   int flags = 0;
   if (mode == READ) {
-    flags = MDB_RDONLY | MDB_NOTLS;
+    flags = MDB_RDONLY | MDB_NOTLS; // 设置一下它的特别选项,一个是只读,一个是不使用线程本地存储
   }
   int rc = mdb_env_open(mdb_env_, source.c_str(), flags, 0664);
 #ifndef ALLOW_LMDB_NOLOCK
   MDB_CHECK(rc);
 #else
-  if (rc == EACCES) {
+  if (rc == EACCES) { // 表示:the user didn't have permission to access the environment files. 
     LOG(WARNING) << "Permission denied. Trying with MDB_NOLOCK ...";
     // Close and re-open environment handle
     mdb_env_close(mdb_env_);
     MDB_CHECK(mdb_env_create(&mdb_env_));
     // Try again with MDB_NOLOCK
-    flags |= MDB_NOLOCK;
+    flags |= MDB_NOLOCK; // 增加了一个选项,它的意思为不作任何锁操作
     MDB_CHECK(mdb_env_open(mdb_env_, source.c_str(), flags, 0664));
   } else {
     MDB_CHECK(rc);
@@ -48,6 +60,7 @@ LMDBTransaction* LMDB::NewTransaction() {
   return new LMDBTransaction(mdb_env_);
 }
 
+//把key与value的值分别push到对应的vector里
 void LMDBTransaction::Put(const string& key, const string& value) {
   keys.push_back(key);
   values.push_back(value);
